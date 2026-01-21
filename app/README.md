@@ -7,7 +7,7 @@ Minimal mobile-only frontend for orienteering push notifications. Built with Vit
 - Vite + Preact + TypeScript
 - Tailwind CSS (mobile-first utilities)
 - Firebase Auth, Cloud Messaging, Firestore
-- LiveResults API (https://liveresults.github.io/documentation/api.html)
+- LiveResults API (<https://liveresults.github.io/documentation/api.html>)
 
 ## Prereqs
 
@@ -22,20 +22,20 @@ Minimal mobile-only frontend for orienteering push notifications. Built with Vit
 npm install
 ```
 
-2. Configure env
+1. Configure env
 
 ```sh
 cp .env.example .env
 # fill VITE_FIREBASE_* values + VAPID key
 ```
 
-3. Run dev server
+1. Run dev server
 
 ```sh
 npm run dev
 ```
 
-4. Build for prod
+1. Build for prod
 
 ```sh
 npm run build
