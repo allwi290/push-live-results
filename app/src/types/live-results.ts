@@ -1,45 +1,52 @@
-export type Country = {
-  code: string
-  name: string
-}
-
 export type Competition = {
-  id: string
+  id: number
   name: string
-  countryCode: string
-  startDate?: string
-  endDate?: string
+  organizer: string
+  date: string
+  timediff?: number
+  multidaystage?: number
+  multidayfirstday?: number
 }
 
 export type RaceClass = {
-  id: string
-  name: string
-  competitionId: string
+  className: string
 }
 
 export type Runner = {
-  id: string
+  place: string
   name: string
-  club?: string
-  bib?: string
+  club: string
+  result: string
+  status: number
+  timeplus: string
+  progress: number
+  start: number
 }
 
 export type ResultEntry = {
-  runnerId: string
+  place: string
+  name: string
+  club: string
+  result: string
+  status: number
+  timeplus: string
+  progress: number
+  start: number
+}
+
+export type LastPassing = {
+  passtime: string
   runnerName: string
-  club?: string
-  position?: number
-  status?: 'running' | 'finished' | 'dns' | 'dnf'
-  lastControl?: string
-  lastTime?: string
-  updatedAt?: string
+  class: string
+  control: number
+  controlName: string
+  time: number
 }
 
 export type SelectionPayload = {
   userId: string
-  countryCode: string
   competitionId: string
-  classId: string
-  runnerIds: string[]
+  className: string
+  runnerNames: string[]
   createdAt: number
 }

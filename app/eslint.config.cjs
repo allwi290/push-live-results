@@ -2,6 +2,7 @@ const tsPlugin = require('@typescript-eslint/eslint-plugin')
 const tsParser = require('@typescript-eslint/parser')
 const reactHooks = require('eslint-plugin-react-hooks')
 const prettierConfig = require('eslint-config-prettier')
+const path = require('path')
 
 module.exports = [
   {
@@ -12,7 +13,7 @@ module.exports = [
     languageOptions: {
       parser: tsParser,
       parserOptions: {
-        project: ['./tsconfig.app.json'],
+        project: path.join(__dirname, 'tsconfig.app.json'),
         tsconfigRootDir: __dirname,
         ecmaVersion: 'latest',
         sourceType: 'module',

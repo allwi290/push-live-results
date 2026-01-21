@@ -2,10 +2,8 @@ import { useEffect, useState } from 'preact/hooks'
 import type { User } from 'firebase/auth'
 import {
   fetchClasses,
+  fetchClassResults,
   fetchCompetitions,
-  fetchCountries,
-  fetchResults,
-  fetchRunners,
 } from './services/liveResults'
 import {
   listenToAuthChanges,
@@ -14,13 +12,7 @@ import {
   signOutUser,
 } from './services/firebase'
 import { saveSelection } from './services/selections'
-import type {
-  Competition,
-  Country,
-  RaceClass,
-  ResultEntry,
-  Runner,
-} from './types/live-results'
+import type { Competition, RaceClass, ResultEntry } from './types/live-results'
 
 type Status = { kind: 'idle' | 'info' | 'error' | 'success'; message: string }
 
@@ -31,15 +23,12 @@ export function App() {
   const [user, setUser] = useState<User | null>(null)
   const [status, setStatus] = useState<Status>({ kind: 'idle', message: '' })
 
-  const [countries, setCountries] = useState<Country[]>([])
   const [competitions, setCompetitions] = useState<Competition[]>([])
   const [classes, setClasses] = useState<RaceClass[]>([])
-  const [runners, setRunners] = useState<Runner[]>([])
   const [results, setResults] = useState<ResultEntry[]>([])
 
-  const [country, setCountry] = useState('')
-  const [competitionId, setCompetitionId] = useState('')
-  const [classId, setClassId] = useState('')
+  const [competitionId, setCompetitionId] = useState<number | null>(null)
+  const [className, setClassName] = useState('')
   const [followed, setFollowed] = useState<string[]>([])
 
   // Auth listener
@@ -61,56 +50,46 @@ export function App() {
     return () => unsub()
   }, [])
 
-  // Load countries once
+  // Load competitions once
   useEffect(() => {
-    fetchCountries().then(setCountries).catch(console.error)
+    fetchCompetitions().then(setCompetitions).catch(console.error)
   }, [])
-
-  // Pull competitions when country changes
-  useEffect(() => {
-    if (!country) {
-      setCompetitions([])
-      setCompetitionId('')
-      return
-    }
-    fetchCompetitions(country).then(setCompetitions).catch(console.error)
-  }, [country])
 
   // Pull classes when competition changes
   useEffect(() => {
     if (!competitionId) {
       setClasses([])
-      setClassId('')
+      setClassName('')
       return
     }
     fetchClasses(competitionId).then(setClasses).catch(console.error)
   }, [competitionId])
 
-  // Pull runners and results when class changes
+  // Pull results when class changes
   useEffect(() => {
-    if (!classId) {
-      setRunners([])
+    if (!competitionId || !className) {
       setResults([])
       return
     }
-    fetchRunners(classId).then(setRunners).catch(console.error)
-    fetchResults(classId).then(setResults).catch(console.error)
-  }, [classId])
+    fetchClassResults(competitionId, className)
+      .then(({ results }) => setResults(results))
+      .catch(console.error)
+  }, [competitionId, className])
 
-  const toggleRunner = (runnerId: string) => {
+  const toggleRunner = (runnerName: string) => {
     setFollowed((prev) =>
-      prev.includes(runnerId)
-        ? prev.filter((id) => id !== runnerId)
-        : [...prev, runnerId],
+      prev.includes(runnerName)
+        ? prev.filter((name) => name !== runnerName)
+        : [...prev, runnerName],
     )
   }
 
-  const followAll = () => setFollowed(runners.map((runner) => runner.id))
+  const followAll = () => setFollowed(results.map((result) => result.name))
 
   const clearFollowed = () => setFollowed([])
 
   const handleSave = async () => {
-    if (!user || !country || !competitionId || !classId) {
+    if (!user || !competitionId || !className) {
       setStatus({ kind: 'error', message: 'Complete selections first' })
       return
     }
@@ -118,10 +97,9 @@ export function App() {
     try {
       await saveSelection({
         userId: user.uid,
-        countryCode: country,
-        competitionId,
-        classId,
-        runnerIds: followed,
+        competitionId: competitionId.toString(),
+        className,
+        runnerNames: followed,
         createdAt: Date.now(),
       })
       setStatus({ kind: 'success', message: 'Saved. Push alerts will follow.' })
@@ -165,31 +143,29 @@ export function App() {
       <section class="mb-4 rounded-2xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
           <h2 class="text-lg font-semibold">Select event</h2>
-          <span class="text-xs text-slate-500">Country → Competition → Class</span>
+          <span class="text-xs text-slate-500">Competition → Class</span>
         </div>
         <div class="mt-3 grid gap-3">
           <Select
-            label="Country"
-            value={country}
-            placeholder="Choose country"
-            onChange={setCountry}
-            options={countries.map((c) => ({ value: c.code, label: c.name }))}
-          />
-          <Select
             label="Competition"
-            value={competitionId}
+            value={competitionId?.toString() || ''}
             placeholder="Choose competition"
-            onChange={setCompetitionId}
-            disabled={!country}
-            options={competitions.map((c) => ({ value: c.id, label: c.name }))}
+            onChange={(val) => setCompetitionId(val ? Number(val) : null)}
+            options={competitions.map((c) => ({
+              value: c.id.toString(),
+              label: `${c.name} (${c.organizer})`,
+            }))}
           />
           <Select
             label="Class"
-            value={classId}
+            value={className}
             placeholder="Choose class"
-            onChange={setClassId}
+            onChange={setClassName}
             disabled={!competitionId}
-            options={classes.map((c) => ({ value: c.id, label: c.name }))}
+            options={classes.map((c) => ({
+              value: c.className,
+              label: c.className,
+            }))}
           />
         </div>
       </section>
@@ -208,19 +184,19 @@ export function App() {
             <button
               class={`${buttonBase} bg-emerald-50 text-emerald-700`}
               onClick={followAll}
-              disabled={!runners.length}
+              disabled={!results.length}
             >
               Follow all
             </button>
           </div>
         </div>
         <div class="mt-3 grid gap-2">
-          {runners.map((runner) => {
-            const checked = followed.includes(runner.id)
+          {results.map((result) => {
+            const checked = followed.includes(result.name)
             return (
               <button
-                key={runner.id}
-                onClick={() => toggleRunner(runner.id)}
+                key={result.name}
+                onClick={() => toggleRunner(result.name)}
                 class={`flex items-center justify-between rounded-xl border px-3 py-3 text-left text-sm transition ${
                   checked
                     ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
@@ -228,20 +204,20 @@ export function App() {
                 }`}
               >
                 <div>
-                  <p class="font-semibold">{runner.name}</p>
-                  {runner.club && <p class="text-xs text-slate-500">{runner.club}</p>}
+                  <p class="font-semibold">{result.name}</p>
+                  {result.club && <p class="text-xs text-slate-500">{result.club}</p>}
                 </div>
                 <input
                   type="checkbox"
                   checked={checked}
-                  aria-label={`Follow ${runner.name}`}
+                  aria-label={`Follow ${result.name}`}
                   class="h-4 w-4 rounded border-slate-300 text-emerald-600"
                   readOnly
                 />
               </button>
             )
           })}
-          {!runners.length && (
+          {!results.length && (
             <p class="text-sm text-slate-500">Select a class to see runners.</p>
           )}
           <button
@@ -273,33 +249,33 @@ export function App() {
           <span class="text-xs text-slate-500">Updated as data arrives</span>
         </div>
         <div class="mt-3 space-y-2">
-          {results.map((result) => (
-            <article
-              key={result.runnerId}
-              class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3"
-            >
-              <div class="flex items-center justify-between text-sm">
-                <div>
-                  <p class="font-semibold">{result.runnerName}</p>
-                  <p class="text-xs text-slate-500">{result.club || '—'}</p>
+          {results.map((result) => {
+            const statusText = getStatusText(result.status)
+            return (
+              <article
+                key={result.name}
+                class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3"
+              >
+                <div class="flex items-center justify-between text-sm">
+                  <div>
+                    <p class="font-semibold">{result.name}</p>
+                    <p class="text-xs text-slate-500">{result.club || '—'}</p>
+                  </div>
+                  <div class="text-right text-xs text-slate-600">
+                    <p>{statusText}</p>
+                    <p>Pos {result.place}</p>
+                  </div>
                 </div>
-                <div class="text-right text-xs text-slate-600">
-                  <p>{result.status || 'running'}</p>
-                  <p>Pos {result.position ?? '–'}</p>
+                <div class="mt-2 grid grid-cols-2 text-xs text-slate-600">
+                  <span>Result: {result.result}</span>
+                  <span class="text-right">{result.timeplus}</span>
                 </div>
-              </div>
-              <div class="mt-2 grid grid-cols-2 text-xs text-slate-600">
-                <span>Last: {result.lastControl || '—'}</span>
-                <span class="text-right">{result.lastTime || '--:--'}</span>
-              </div>
-              <p class="mt-1 text-[11px] text-slate-400">
-                Updated{' '}
-                {result.updatedAt
-                  ? new Date(result.updatedAt).toLocaleTimeString()
-                  : 'recently'}
-              </p>
-            </article>
-          ))}
+                <p class="mt-1 text-[11px] text-slate-400">
+                  Progress: {result.progress}%
+                </p>
+              </article>
+            )
+          })}
           {!results.length && (
             <p class="text-sm text-slate-500">Select a class to see live results.</p>
           )}
@@ -307,6 +283,22 @@ export function App() {
       </section>
     </div>
   )
+}
+
+function getStatusText(status: number): string {
+  const statusMap: Record<number, string> = {
+    0: 'OK',
+    1: 'DNS',
+    2: 'DNF',
+    3: 'MP',
+    4: 'DSQ',
+    5: 'OT',
+    9: 'Not Started',
+    10: 'Not Started',
+    11: 'Walk Over',
+    12: 'Moved Up',
+  }
+  return statusMap[status] || 'Unknown'
 }
 
 type SelectProps = {

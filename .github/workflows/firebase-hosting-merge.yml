@@ -11,9 +11,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npm ci && npm run build
+      
+      # Build frontend
+      - name: Build frontend
+        run: npm ci && npm run build
         working-directory: app
+      
+      # Build functions
+      - name: Build functions
+        run: npm ci && npm run build
+        working-directory: functions
 
+      # Deploy to Firebase (hosting + functions)
       - uses: FirebaseExtended/action-hosting-deploy@v0.9.0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}

@@ -1,100 +1,166 @@
 import type {
   Competition,
-  Country,
+  LastPassing,
   RaceClass,
   ResultEntry,
-  Runner,
 } from '../types/live-results'
 
 // Points to our Firebase Cloud Functions backend API (NOT directly to external LiveResults API)
 // Backend handles caching and hash-based polling to minimize load on external API
 const API_BASE = import.meta.env.VITE_BACKEND_API_URL || '/api'
 
-async function fetchJson<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`)
+type ApiResponse<T> = {
+  status: string
+  hash?: string
+} & T
+
+async function fetchJson<T>(params: URLSearchParams): Promise<T> {
+  const url = `${API_BASE}?${params.toString()}`
+  const res = await fetch(url)
   if (!res.ok) {
     throw new Error(`LiveResults request failed: ${res.status}`)
   }
-  return res.json() as Promise<T>
+  const data = (await res.json()) as ApiResponse<T>
+  if (data.status === 'NOT MODIFIED') {
+    throw new Error('NOT_MODIFIED')
+  }
+  return data as T
 }
 
 // Fallback stub data so the UI remains usable during development.
 const fallback = {
-  countries: [
-    { code: 'SE', name: 'Sweden' },
-    { code: 'NO', name: 'Norway' },
-    { code: 'FI', name: 'Finland' },
-  ],
   competitions: [
     {
-      id: 'sample-1',
-      name: 'Sample Orienteering Cup',
-      countryCode: 'SE',
-      startDate: '2026-04-20',
-      endDate: '2026-04-21',
+      id: 10278,
+      name: 'Demo Competition',
+      organizer: 'Test Organizer',
+      date: '2026-04-20',
+      timediff: 0,
     },
   ],
-  classes: [
-    { id: 'h21', name: 'H21', competitionId: 'sample-1' },
-    { id: 'd21', name: 'D21', competitionId: 'sample-1' },
-  ],
-  runners: [
-    { id: 'r1', name: 'Lina Karlsson', club: 'IFK' },
-    { id: 'r2', name: 'Oskar Berg', club: 'OK Linné' },
-    { id: 'r3', name: 'Maja Lind', club: 'OK Orion' },
+  classes: [{ className: 'H21' }, { className: 'D21' }],
+  results: [
+    {
+      place: '1',
+      name: 'Lina Karlsson',
+      club: 'IFK',
+      result: '45:23',
+      status: 0,
+      timeplus: '+00:00',
+      progress: 100,
+      start: 36000000,
+    },
+    {
+      place: '2',
+      name: 'Oskar Berg',
+      club: 'OK Linné',
+      result: '46:15',
+      status: 0,
+      timeplus: '+00:52',
+      progress: 100,
+      start: 36000000,
+    },
   ],
 }
 
-export async function fetchCountries(): Promise<Country[]> {
+export async function fetchCompetitions(): Promise<Competition[]> {
   try {
-    return await fetchJson<Country[]>('/countries')
-  } catch (error) {
-    console.warn('Using fallback countries', error)
-    return fallback.countries
-  }
-}
-
-export async function fetchCompetitions(countryCode: string): Promise<Competition[]> {
-  try {
-    return await fetchJson<Competition[]>(`/competitions?country=${countryCode}`)
+    const params = new URLSearchParams({ method: 'getcompetitions' })
+    const data = await fetchJson<{ competitions: Competition[] }>(params)
+    return data.competitions
   } catch (error) {
     console.warn('Using fallback competitions', error)
-    return fallback.competitions.filter((c) => c.countryCode === countryCode)
+    return fallback.competitions
   }
 }
 
-export async function fetchClasses(competitionId: string): Promise<RaceClass[]> {
+export async function fetchCompetitionInfo(
+  compId: number,
+): Promise<Competition | null> {
   try {
-    return await fetchJson<RaceClass[]>(`/classes?competition=${competitionId}`)
+    const params = new URLSearchParams({
+      method: 'getcompetitioninfo',
+      comp: compId.toString(),
+    })
+    return await fetchJson<Competition>(params)
   } catch (error) {
+    console.warn('Failed to fetch competition info', error)
+    return null
+  }
+}
+
+export async function fetchClasses(
+  compId: number,
+  lastHash?: string,
+): Promise<RaceClass[]> {
+  try {
+    const params = new URLSearchParams({
+      method: 'getclasses',
+      comp: compId.toString(),
+    })
+    if (lastHash) {
+      params.append('last_hash', lastHash)
+    }
+    const data = await fetchJson<{ classes: RaceClass[] }>(params)
+    return data.classes
+  } catch (error) {
+    if (error instanceof Error && error.message === 'NOT_MODIFIED') {
+      throw error
+    }
     console.warn('Using fallback classes', error)
-    return fallback.classes.filter((c) => c.competitionId === competitionId)
+    return fallback.classes
   }
 }
 
-export async function fetchRunners(classId: string): Promise<Runner[]> {
+export async function fetchClassResults(
+  compId: number,
+  className: string,
+  lastHash?: string,
+): Promise<{ results: ResultEntry[]; hash?: string }> {
   try {
-    return await fetchJson<Runner[]>(`/runners?class=${classId}`)
+    const params = new URLSearchParams({
+      method: 'getclassresults',
+      comp: compId.toString(),
+      class: className,
+      unformattedTimes: 'false',
+    })
+    if (lastHash) {
+      params.append('last_hash', lastHash)
+    }
+    const data = await fetchJson<{
+      className: string
+      results: ResultEntry[]
+      hash?: string
+    }>(params)
+    return { results: data.results, hash: data.hash }
   } catch (error) {
-    console.warn('Using fallback runners', error)
-    return fallback.runners
-  }
-}
-
-export async function fetchResults(classId: string): Promise<ResultEntry[]> {
-  try {
-    return await fetchJson<ResultEntry[]>(`/results?class=${classId}`)
-  } catch (error) {
+    if (error instanceof Error && error.message === 'NOT_MODIFIED') {
+      throw error
+    }
     console.warn('Using fallback results', error)
-    return fallback.runners.map((runner, index) => ({
-      runnerId: runner.id,
-      runnerName: runner.name,
-      club: runner.club,
-      position: index + 1,
-      status: 'running',
-      lastControl: 'Finish',
-      lastTime: `00:${10 + index}:30`,
-      updatedAt: new Date().toISOString(),
-    }))
+    return { results: fallback.results }
+  }
+}
+
+export async function fetchLastPassings(
+  compId: number,
+  lastHash?: string,
+): Promise<{ passings: LastPassing[]; hash?: string }> {
+  try {
+    const params = new URLSearchParams({
+      method: 'getlastpassings',
+      comp: compId.toString(),
+    })
+    if (lastHash) {
+      params.append('last_hash', lastHash)
+    }
+    const data = await fetchJson<{ passings: LastPassing[]; hash?: string }>(params)
+    return data
+  } catch (error) {
+    if (error instanceof Error && error.message === 'NOT_MODIFIED') {
+      throw error
+    }
+    console.warn('Failed to fetch last passings', error)
+    return { passings: [] }
   }
 }

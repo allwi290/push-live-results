@@ -1,0 +1,168 @@
+/**
+ * Client for LiveResults API
+ */
+
+import * as logger from "firebase-functions/logger";
+import {ApiResponse, Competition, RaceClass, ResultEntry, LastPassing} from "./types";
+
+const LIVE_RESULTS_API = "http://liveresultat.orientering.se/api.php";
+
+/**
+ * Fetch competitions from LiveResults API
+ */
+export async function fetchCompetitions(): Promise<ApiResponse<Competition[]>> {
+  const url = new URL(LIVE_RESULTS_API);
+  url.searchParams.set("method", "getcompetitions");
+
+  try {
+    const response = await fetch(url.toString());
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return {
+      status: "OK",
+      data: data.competitions || [],
+    };
+  } catch (error) {
+    logger.error("Error fetching competitions:", error);
+    return {
+      status: "ERROR",
+      data: [],
+    };
+  }
+}
+
+/**
+ * Fetch classes for a competition
+ */
+export async function fetchClasses(
+  compId: number,
+  lastHash?: string
+): Promise<ApiResponse<RaceClass[]>> {
+  const url = new URL(LIVE_RESULTS_API);
+  url.searchParams.set("method", "getclasses");
+  url.searchParams.set("comp", compId.toString());
+  if (lastHash) {
+    url.searchParams.set("last_hash", lastHash);
+  }
+
+  try {
+    const response = await fetch(url.toString());
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    if (data.status === "NOT MODIFIED") {
+      return {
+        status: "NOT MODIFIED",
+        hash: data.hash,
+      };
+    }
+
+    return {
+      status: "OK",
+      hash: data.hash,
+      data: data.classes || [],
+    };
+  } catch (error) {
+    logger.error("Error fetching classes:", error);
+    return {
+      status: "ERROR",
+      data: [],
+    };
+  }
+}
+
+/**
+ * Fetch results for a specific class
+ */
+export async function fetchClassResults(
+  compId: number,
+  className: string,
+  lastHash?: string
+): Promise<ApiResponse<ResultEntry[]>> {
+  const url = new URL(LIVE_RESULTS_API);
+  url.searchParams.set("method", "getclassresults");
+  url.searchParams.set("comp", compId.toString());
+  url.searchParams.set("class", className);
+  url.searchParams.set("unformattedTimes", "true");
+  if (lastHash) {
+    url.searchParams.set("last_hash", lastHash);
+  }
+
+  try {
+    const response = await fetch(url.toString());
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    if (data.status === "NOT MODIFIED") {
+      return {
+        status: "NOT MODIFIED",
+        hash: data.hash,
+      };
+    }
+
+    return {
+      status: "OK",
+      hash: data.hash,
+      data: data.results || [],
+    };
+  } catch (error) {
+    logger.error("Error fetching class results:", error);
+    return {
+      status: "ERROR",
+      data: [],
+    };
+  }
+}
+
+/**
+ * Fetch last passings for a competition
+ */
+export async function fetchLastPassings(
+  compId: number,
+  lastHash?: string
+): Promise<ApiResponse<LastPassing[]>> {
+  const url = new URL(LIVE_RESULTS_API);
+  url.searchParams.set("method", "getlastpassings");
+  url.searchParams.set("comp", compId.toString());
+  url.searchParams.set("unformattedTimes", "true");
+  if (lastHash) {
+    url.searchParams.set("last_hash", lastHash);
+  }
+
+  try {
+    const response = await fetch(url.toString());
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    if (data.status === "NOT MODIFIED") {
+      return {
+        status: "NOT MODIFIED",
+        hash: data.hash,
+      };
+    }
+
+    return {
+      status: "OK",
+      hash: data.hash,
+      data: data.passings || [],
+    };
+  } catch (error) {
+    logger.error("Error fetching last passings:", error);
+    return {
+      status: "ERROR",
+      data: [],
+    };
+  }
+}
