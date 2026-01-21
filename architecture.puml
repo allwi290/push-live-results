@@ -1,0 +1,88 @@
+@startuml Push Live Results Architecture
+
+!define ICONURL https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/v2.4.0
+!include ICONURL/common.puml
+!include ICONURL/font-awesome-5/mobile_alt.puml
+!include ICONURL/font-awesome-5/server.puml
+!include ICONURL/font-awesome-5/database.puml
+!include ICONURL/font-awesome-5/bell.puml
+!include ICONURL/font-awesome-5/cloud.puml
+
+skinparam componentStyle rectangle
+skinparam backgroundColor #f8fafc
+skinparam defaultTextAlignment center
+
+title Push Live Results - System Architecture
+
+actor User as user
+rectangle "Mobile Web App" as webapp {
+  component "Preact UI\n(Mobile-First)" as ui <<$mobile_alt>>
+  component "Firebase SDK" as sdk
+}
+
+cloud "Firebase Services" as firebase {
+  component "Authentication\n(Google/Email)" as auth <<$cloud>>
+  database "Firestore\n(Cached Data\n+ User Selections)" as firestore <<$database>>
+  component "Cloud Messaging\n(FCM)" as fcm <<$bell>>
+  component "Cloud Functions\n(Backend API)" as functions <<$server>>
+  component "Hosting" as hosting
+}
+
+cloud "External API" as external {
+  component "LiveResults API\n(Orienteering Events)" as liveapi <<$server>>
+}
+
+' User interactions
+user --> ui : 1. Login\n2. Select event/class\n3. Follow runners
+
+' Frontend to Firebase
+ui --> sdk : Auth, Firestore,\nMessaging
+sdk --> auth : Sign in
+sdk --> firestore : Save/Load\nselections
+sdk --> fcm : Request token\n& receive push
+
+' Frontend to Backend API (NOT directly to external API)
+ui --> functions : GET /api/countries\nGET /api/competitions\nGET /api/classes\nGET /api/results
+
+' Backend processing
+functions --> firestore : Read/Write\ncached data
+functions --> fcm : Send notifications\nfor runner updates
+functions --> liveapi : Poll with hash\nfor updates\n(minimize transfer)
+
+hosting --> ui : Serve app
+
+note right of functions
+  **Backend Responsibilities**
+  • Expose REST API for frontend
+  • Poll LiveResults API (hash-based)
+  • Cache data in Firestore
+  • Detect changes → send FCM
+  • Purge user data on event end
+  • Drop cached results after 7 days
+end note
+
+note right of firestore
+  **Collections**
+  • selections (userId, eventId, classId, runnerIds[], fcmToken)
+  • competitions (cached from LiveResults)
+  • classes (cached from LiveResults)
+  • results (cached, hash-tracked for updates)
+  • countries (cached from LiveResults)
+end note
+
+note left of ui
+  **User Flow**
+  1. Auth (social/email)
+  2. Select: Country → Competition → Class
+  3. Pick runners (or "follow all")
+  4. Save → Enable push alerts
+  5. View live results
+end note
+
+note bottom of liveapi
+  **API Reference**
+  https://liveresults.github.io/
+  documentation/api.html
+end note
+
+@enduml
