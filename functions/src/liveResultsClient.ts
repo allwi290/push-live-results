@@ -6,7 +6,7 @@ import * as logger from "firebase-functions/logger";
 import {ApiResponse, Competition, RaceClass, ResultEntry, LastPassing} from "./types";
 import JSON5 from "json5";
 
-const LIVE_RESULTS_API = "http://liveresultat.orientering.se/api.php";
+const LIVE_RESULTS_API = "https://liveresultat.orientering.se/api.php";
 
 /**
  * Fetch competitions from LiveResults API
