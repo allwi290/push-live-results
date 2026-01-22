@@ -66,8 +66,8 @@ const fallback = {
 export async function fetchCompetitions(): Promise<Competition[]> {
   try {
     const params = new URLSearchParams({ method: 'getcompetitions' })
-    const data = await fetchJson<{ competitions: Competition[] }>(params)
-    return data.competitions
+    const data = await fetchJson<{ data: Competition[] }>(params)
+    return data.data
   } catch (error) {
     console.warn('Using fallback competitions', error)
     return fallback.competitions
@@ -101,8 +101,8 @@ export async function fetchClasses(
     if (lastHash) {
       params.append('last_hash', lastHash)
     }
-    const data = await fetchJson<{ classes: RaceClass[] }>(params)
-    return data.classes
+    const data = await fetchJson<{ data: RaceClass[] }>(params)
+    return data.data
   } catch (error) {
     if (error instanceof Error && error.message === 'NOT_MODIFIED') {
       throw error
@@ -127,12 +127,11 @@ export async function fetchClassResults(
     if (lastHash) {
       params.append('last_hash', lastHash)
     }
-    const data = await fetchJson<{
-      className: string
-      results: ResultEntry[]
+    const response = await fetchJson<{
+      data: ResultEntry[]
       hash?: string
     }>(params)
-    return { results: data.results, hash: data.hash }
+    return { results: response.data, hash: response.hash }
   } catch (error) {
     if (error instanceof Error && error.message === 'NOT_MODIFIED') {
       throw error
@@ -154,8 +153,8 @@ export async function fetchLastPassings(
     if (lastHash) {
       params.append('last_hash', lastHash)
     }
-    const data = await fetchJson<{ passings: LastPassing[]; hash?: string }>(params)
-    return data
+    const response = await fetchJson<{ data: LastPassing[]; hash?: string }>(params)
+    return { passings: response.data, hash: response.hash }
   } catch (error) {
     if (error instanceof Error && error.message === 'NOT_MODIFIED') {
       throw error
