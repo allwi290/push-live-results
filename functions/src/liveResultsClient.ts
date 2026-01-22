@@ -38,9 +38,28 @@ export async function fetchCompetitions(): Promise<ApiResponse<Competition[]>> {
     
     // Use JSON5 for more lenient parsing
     const data = JSON5.parse(text);
+    
+    // Filter and sort competitions:
+    // - Only include events from the last 7 days
+    // - Exclude future events
+    // - Sort with latest first (descending)
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    
+    const filtered = (data.competitions || [])
+      .filter((comp: Competition) => {
+        const compDate = new Date(comp.date);
+        return compDate <= now && compDate >= sevenDaysAgo;
+      })
+      .sort((a: Competition, b: Competition) => {
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      });
+    
+    logger.info(`Filtered competitions: ${filtered.length} out of ${data.competitions?.length || 0}`);
+    
     return {
       status: "OK",
-      data: data.competitions || [],
+      data: filtered,
     };
   } catch (error) {
     logger.error("Error fetching competitions:", error);
