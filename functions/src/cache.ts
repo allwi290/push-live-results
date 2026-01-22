@@ -36,7 +36,8 @@ export async function getCachedData(
     logger.info(`Cache hit for key: ${cacheKey}`);
     return data;
   } catch (error) {
-    logger.error("Error reading from cache:", error);
+    // Silently fail for cache reads - caching is optional
+    // This is especially common during emulator startup
     return null;
   }
 }
@@ -62,7 +63,11 @@ export async function setCachedData(
     await docRef.set(cachedData);
     logger.info(`Cache updated for key: ${cacheKey}`);
   } catch (error) {
-    logger.error("Error writing to cache:", error);
+    // Silently fail for cache writes - caching is optional
+    // This is especially common during emulator startup
+    if (error instanceof Error) {
+      logger.debug(`Cache write failed (${error.message})`);
+    }
   }
 }
 
