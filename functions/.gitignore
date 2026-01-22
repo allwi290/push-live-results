@@ -1,6 +1,7 @@
-# Compiled JavaScript files
-lib/**/*.js
-lib/**/*.js.map
+# Compiled JavaScript files - keep as source of truth for Cloud Functions deployment
+# (lib/ must be committed because Firebase deploys from git, not from build output)
+# lib/**/*.js
+# lib/**/*.js.map
 
 # TypeScript v1 declaration files
 typings/
