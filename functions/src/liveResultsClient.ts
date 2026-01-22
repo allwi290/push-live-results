@@ -4,6 +4,7 @@
 
 import * as logger from "firebase-functions/logger";
 import {ApiResponse, Competition, RaceClass, ResultEntry, LastPassing} from "./types";
+import JSON5 from "json5";
 
 const LIVE_RESULTS_API = "http://liveresultat.orientering.se/api.php";
 
@@ -20,7 +21,23 @@ export async function fetchCompetitions(): Promise<ApiResponse<Competition[]>> {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const data = await response.json();
+    const arrayBuffer = await response.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    
+    // Replace control characters at the byte level BEFORE decoding
+    for (let i = 0; i < uint8Array.length; i++) {
+      const byte = uint8Array[i];
+      // Check for control characters: 0x00-0x1F (except HT=0x09, LF=0x0A, CR=0x0D)
+      if (byte < 0x20 && byte !== 0x09 && byte !== 0x0A && byte !== 0x0D) {
+        uint8Array[i] = 0x20;
+      }
+    }
+    
+    const text = new TextDecoder("utf-8", {fatal: false}).decode(uint8Array);
+    logger.info(`Decoded: ${text.length} chars`);
+    
+    // Use JSON5 for more lenient parsing
+    const data = JSON5.parse(text);
     return {
       status: "OK",
       data: data.competitions || [],
@@ -54,7 +71,18 @@ export async function fetchClasses(
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const data = await response.json();
+    const arrayBuffer = await response.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    
+    for (let i = 0; i < uint8Array.length; i++) {
+      const byte = uint8Array[i];
+      if (byte < 0x20 && byte !== 0x09 && byte !== 0x0A && byte !== 0x0D) {
+        uint8Array[i] = 0x20;
+      }
+    }
+    
+    const text = new TextDecoder("utf-8", {fatal: false}).decode(uint8Array);
+    const data = JSON5.parse(text);
 
     if (data.status === "NOT MODIFIED") {
       return {
@@ -100,7 +128,18 @@ export async function fetchClassResults(
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const data = await response.json();
+    const arrayBuffer = await response.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    
+    for (let i = 0; i < uint8Array.length; i++) {
+      const byte = uint8Array[i];
+      if (byte < 0x20 && byte !== 0x09 && byte !== 0x0A && byte !== 0x0D) {
+        uint8Array[i] = 0x20;
+      }
+    }
+    
+    const text = new TextDecoder("utf-8", {fatal: false}).decode(uint8Array);
+    const data = JSON5.parse(text);
 
     if (data.status === "NOT MODIFIED") {
       return {
@@ -144,7 +183,18 @@ export async function fetchLastPassings(
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const data = await response.json();
+    const arrayBuffer = await response.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    
+    for (let i = 0; i < uint8Array.length; i++) {
+      const byte = uint8Array[i];
+      if (byte < 0x20 && byte !== 0x09 && byte !== 0x0A && byte !== 0x0D) {
+        uint8Array[i] = 0x20;
+      }
+    }
+    
+    const text = new TextDecoder("utf-8", {fatal: false}).decode(uint8Array);
+    const data = JSON5.parse(text);
 
     if (data.status === "NOT MODIFIED") {
       return {
