@@ -18,6 +18,7 @@ import {
   setCachedData,
   getCacheKey,
   cleanOldCache,
+  CACHE_TTL,
 } from "./cache";
 import {notifyResultChanges, cleanOldSelections} from "./notifications";
 import type {ResultEntry} from "./types";
@@ -50,9 +51,9 @@ export const api = onRequest(
 
       switch (method) {
         case "getcompetitions": {
-          // Competitions list changes rarely, cache for longer
+          // Competitions list changes rarely, cache for 1 hour
           const cacheKey = getCacheKey({method});
-          const cached = await getCachedData(cacheKey);
+          const cached = await getCachedData(cacheKey, CACHE_TTL.COMPETITIONS);
 
           if (cached && lastHash && cached.hash === lastHash) {
             res.json({status: "NOT MODIFIED", hash: cached.hash});
@@ -89,7 +90,7 @@ export const api = onRequest(
           }
 
           const cacheKey = getCacheKey({method, comp: compId});
-          const cached = await getCachedData(cacheKey);
+          const cached = await getCachedData(cacheKey, CACHE_TTL.CLASSES);
 
           if (cached && lastHash && cached.hash === lastHash) {
             res.json({status: "NOT MODIFIED", hash: cached.hash});
@@ -124,7 +125,7 @@ export const api = onRequest(
           }
 
           const cacheKey = getCacheKey({method, comp: compId, class: className});
-          const cached = await getCachedData(cacheKey);
+          const cached = await getCachedData(cacheKey, CACHE_TTL.CLASS_RESULTS);
 
           if (cached && lastHash && cached.hash === lastHash) {
             res.json({status: "NOT MODIFIED", hash: cached.hash});
@@ -169,7 +170,7 @@ export const api = onRequest(
           }
 
           const cacheKey = getCacheKey({method, comp: compId});
-          const cached = await getCachedData(cacheKey);
+          const cached = await getCachedData(cacheKey, CACHE_TTL.LAST_PASSINGS);
 
           if (cached && lastHash && cached.hash === lastHash) {
             res.json({status: "NOT MODIFIED", hash: cached.hash});

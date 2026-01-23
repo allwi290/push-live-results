@@ -7,13 +7,21 @@ import * as logger from "firebase-functions/logger";
 import {CachedData} from "./types";
 
 const CACHE_COLLECTION = "api_cache";
-const CACHE_TTL_MS = 15 * 1000; // 15 seconds (matches LiveResults API cache)
+
+// Cache TTL constants
+export const CACHE_TTL = {
+  COMPETITIONS: 60 * 60 * 1000, // 1 hour
+  CLASSES: 15 * 60 * 1000, // 15 minutes
+  CLASS_RESULTS: 15 * 60 * 1000, // 15 minutes
+  LAST_PASSINGS: 15 * 1000, // 15 seconds
+};
 
 /**
  * Get cached data from Firestore
  */
 export async function getCachedData(
-  cacheKey: string
+  cacheKey: string,
+  ttlMs: number
 ): Promise<CachedData | null> {
   try {
     const db = getFirestore();
@@ -28,7 +36,7 @@ export async function getCachedData(
     const now = Date.now();
 
     // Check if cache is expired
-    if (now - data.timestamp > CACHE_TTL_MS) {
+    if (now - data.timestamp > ttlMs) {
       logger.info(`Cache expired for key: ${cacheKey}`);
       return null;
     }
