@@ -135,7 +135,7 @@ export async function fetchClassResults(
     method: "getclassresults",
     comp: compId.toString(),
     class: className,
-    unformattedTimes: "true",
+    unformattedTimes: "false",
   };
   if (lastHash) {
     params.last_hash = lastHash;
@@ -154,7 +154,7 @@ export async function fetchLastPassings(
   const params: Record<string, string> = {
     method: "getlastpassings",
     comp: compId.toString(),
-    unformattedTimes: "true",
+    unformattedTimes: "false",
   };
   if (lastHash) {
     params.last_hash = lastHash;
