@@ -8,10 +8,12 @@ import {
 import {
   listenToAuthChanges,
   requestNotificationPermission,
-  signInWithGoogle,
   signOutUser,
+  checkForEmailLink,
+  completeEmailLinkSignIn,
 } from './services/firebase'
 import { saveSelection } from './services/selections'
+import { AuthModal } from './components/AuthModal'
 import type { Competition, RaceClass, ResultEntry } from './types/live-results'
 
 type Status = { kind: 'idle' | 'info' | 'error' | 'success'; message: string }
@@ -22,6 +24,7 @@ const buttonBase =
 export function App() {
   const [user, setUser] = useState<User | null>(null)
   const [status, setStatus] = useState<Status>({ kind: 'idle', message: '' })
+  const [showAuthModal, setShowAuthModal] = useState(false)
 
   const [competitions, setCompetitions] = useState<Competition[]>([])
   const [classes, setClasses] = useState<RaceClass[]>([])
@@ -30,6 +33,24 @@ export function App() {
   const [competitionId, setCompetitionId] = useState<number | null>(null)
   const [className, setClassName] = useState('')
   const [followed, setFollowed] = useState<string[]>([])
+
+  // Handle email link sign-in on mount
+  useEffect(() => {
+    if (checkForEmailLink()) {
+      completeEmailLinkSignIn()
+        .then(() => {
+          setStatus({ kind: 'success', message: 'Signed in successfully!' })
+          // Remove the emailLink param from URL
+          window.history.replaceState({}, document.title, window.location.pathname)
+        })
+        .catch((err) => {
+          setStatus({
+            kind: 'error',
+            message: err instanceof Error ? err.message : 'Failed to sign in',
+          })
+        })
+    }
+  }, [])
 
   // Auth listener
   useEffect(() => {
@@ -121,7 +142,7 @@ export function App() {
         <div class="text-right">
           {user ? (
             <>
-              <p class="text-sm font-medium">{user.displayName || 'Account'}</p>
+              <p class="text-sm font-medium">{user.displayName || user.email || 'Account'}</p>
               <button
                 class={`${buttonBase} bg-slate-100 text-slate-700`}
                 onClick={signOutUser}
@@ -132,7 +153,7 @@ export function App() {
           ) : (
             <button
               class={`${buttonBase} bg-emerald-600 text-white`}
-              onClick={signInWithGoogle}
+              onClick={() => setShowAuthModal(true)}
             >
               Sign in to follow runners
             </button>
@@ -281,6 +302,8 @@ export function App() {
           )}
         </div>
       </section>
+
+      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
     </div>
   )
 }

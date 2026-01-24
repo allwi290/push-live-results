@@ -66,9 +66,9 @@ exports.api = (0, https_1.onRequest)({ cors: true, maxInstances: 5 }, async (req
         logger.info(`API request: method=${method}, comp=${compId}, class=${className}`);
         switch (method) {
             case "getcompetitions": {
-                // Competitions list changes rarely, cache for longer
+                // Competitions list changes rarely, cache for 1 hour
                 const cacheKey = (0, cache_1.getCacheKey)({ method });
-                const cached = await (0, cache_1.getCachedData)(cacheKey);
+                const cached = await (0, cache_1.getCachedData)(cacheKey, cache_1.CACHE_TTL.COMPETITIONS);
                 if (cached && lastHash && cached.hash === lastHash) {
                     res.json({ status: "NOT MODIFIED", hash: cached.hash });
                     return;
@@ -101,7 +101,7 @@ exports.api = (0, https_1.onRequest)({ cors: true, maxInstances: 5 }, async (req
                     return;
                 }
                 const cacheKey = (0, cache_1.getCacheKey)({ method, comp: compId });
-                const cached = await (0, cache_1.getCachedData)(cacheKey);
+                const cached = await (0, cache_1.getCachedData)(cacheKey, cache_1.CACHE_TTL.CLASSES);
                 if (cached && lastHash && cached.hash === lastHash) {
                     res.json({ status: "NOT MODIFIED", hash: cached.hash });
                     return;
@@ -133,7 +133,7 @@ exports.api = (0, https_1.onRequest)({ cors: true, maxInstances: 5 }, async (req
                     return;
                 }
                 const cacheKey = (0, cache_1.getCacheKey)({ method, comp: compId, class: className });
-                const cached = await (0, cache_1.getCachedData)(cacheKey);
+                const cached = await (0, cache_1.getCachedData)(cacheKey, cache_1.CACHE_TTL.CLASS_RESULTS);
                 if (cached && lastHash && cached.hash === lastHash) {
                     res.json({ status: "NOT MODIFIED", hash: cached.hash });
                     return;
@@ -170,7 +170,7 @@ exports.api = (0, https_1.onRequest)({ cors: true, maxInstances: 5 }, async (req
                     return;
                 }
                 const cacheKey = (0, cache_1.getCacheKey)({ method, comp: compId });
-                const cached = await (0, cache_1.getCachedData)(cacheKey);
+                const cached = await (0, cache_1.getCachedData)(cacheKey, cache_1.CACHE_TTL.LAST_PASSINGS);
                 if (cached && lastHash && cached.hash === lastHash) {
                     res.json({ status: "NOT MODIFIED", hash: cached.hash });
                     return;

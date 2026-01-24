@@ -6,6 +6,11 @@ import {
   onAuthStateChanged,
   signInWithPopup,
   signOut,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendSignInLinkToEmail,
+  isSignInWithEmailLink,
+  signInWithEmailLink,
 } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 import { getMessaging, getToken, isSupported } from 'firebase/messaging'
@@ -35,6 +40,37 @@ export function listenToAuthChanges(callback: (user: User | null) => void) {
 export async function signInWithGoogle() {
   const provider = new GoogleAuthProvider()
   await signInWithPopup(auth, provider)
+}
+
+export async function signUpWithEmail(email: string, password: string) {
+  await createUserWithEmailAndPassword(auth, email, password)
+}
+
+export async function signInWithEmail(email: string, password: string) {
+  await signInWithEmailAndPassword(auth, email, password)
+}
+
+export async function sendEmailLink(email: string) {
+  const actionCodeSettings = {
+    url: `${window.location.origin}?emailLink=true`,
+    handleCodeInApp: true,
+  }
+  await sendSignInLinkToEmail(auth, email, actionCodeSettings)
+  // Save email in localStorage for later use
+  window.localStorage.setItem('emailForSignIn', email)
+}
+
+export function checkForEmailLink(): boolean {
+  return isSignInWithEmailLink(auth, window.location.href)
+}
+
+export async function completeEmailLinkSignIn() {
+  const email = window.localStorage.getItem('emailForSignIn')
+  if (!email) {
+    throw new Error('Email not found. Please try again.')
+  }
+  await signInWithEmailLink(auth, email, window.location.href)
+  window.localStorage.removeItem('emailForSignIn')
 }
 
 export async function signOutUser() {

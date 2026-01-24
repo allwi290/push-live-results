@@ -36,6 +36,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.CACHE_TTL = void 0;
 exports.getCachedData = getCachedData;
 exports.setCachedData = setCachedData;
 exports.getCacheKey = getCacheKey;
@@ -43,11 +44,17 @@ exports.cleanOldCache = cleanOldCache;
 const firestore_1 = require("firebase-admin/firestore");
 const logger = __importStar(require("firebase-functions/logger"));
 const CACHE_COLLECTION = "api_cache";
-const CACHE_TTL_MS = 15 * 1000; // 15 seconds (matches LiveResults API cache)
+// Cache TTL constants
+exports.CACHE_TTL = {
+    COMPETITIONS: 60 * 60 * 1000, // 1 hour
+    CLASSES: 15 * 60 * 1000, // 15 minutes
+    CLASS_RESULTS: 15 * 60 * 1000, // 15 minutes
+    LAST_PASSINGS: 15 * 1000, // 15 seconds
+};
 /**
  * Get cached data from Firestore
  */
-async function getCachedData(cacheKey) {
+async function getCachedData(cacheKey, ttlMs) {
     try {
         const db = (0, firestore_1.getFirestore)();
         const docRef = db.collection(CACHE_COLLECTION).doc(cacheKey);
@@ -58,7 +65,7 @@ async function getCachedData(cacheKey) {
         const data = doc.data();
         const now = Date.now();
         // Check if cache is expired
-        if (now - data.timestamp > CACHE_TTL_MS) {
+        if (now - data.timestamp > ttlMs) {
             logger.info(`Cache expired for key: ${cacheKey}`);
             return null;
         }

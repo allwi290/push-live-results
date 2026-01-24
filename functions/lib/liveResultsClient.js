@@ -47,12 +47,25 @@ const logger = __importStar(require("firebase-functions/logger"));
 const json5_1 = __importDefault(require("json5"));
 const LIVE_RESULTS_API = "https://liveresultat.orientering.se/api.php";
 /**
- * Fetch competitions from LiveResults API
+ * Sanitize byte array by replacing control characters
  */
-async function fetchCompetitions() {
-    var _a;
+function sanitizeControlCharacters(uint8Array) {
+    for (let i = 0; i < uint8Array.length; i++) {
+        const byte = uint8Array[i];
+        // Check for control characters: 0x00-0x1F (except HT=0x09, LF=0x0A, CR=0x0D)
+        if (byte < 0x20 && byte !== 0x09 && byte !== 0x0A && byte !== 0x0D) {
+            uint8Array[i] = 0x20;
+        }
+    }
+}
+/**
+ * Generic fetch function for LiveResults API
+ */
+async function fetchFromAPI(params, dataKey) {
     const url = new URL(LIVE_RESULTS_API);
-    url.searchParams.set("method", "getcompetitions");
+    Object.entries(params).forEach(([key, value]) => {
+        url.searchParams.set(key, value);
+    });
     try {
         const response = await fetch(url.toString());
         if (!response.ok) {
@@ -60,25 +73,42 @@ async function fetchCompetitions() {
         }
         const arrayBuffer = await response.arrayBuffer();
         const uint8Array = new Uint8Array(arrayBuffer);
-        // Replace control characters at the byte level BEFORE decoding
-        for (let i = 0; i < uint8Array.length; i++) {
-            const byte = uint8Array[i];
-            // Check for control characters: 0x00-0x1F (except HT=0x09, LF=0x0A, CR=0x0D)
-            if (byte < 0x20 && byte !== 0x09 && byte !== 0x0A && byte !== 0x0D) {
-                uint8Array[i] = 0x20;
-            }
-        }
+        sanitizeControlCharacters(uint8Array);
         const text = new TextDecoder("utf-8", { fatal: false }).decode(uint8Array);
-        logger.info(`Decoded: ${text.length} chars`);
-        // Use JSON5 for more lenient parsing
         const data = json5_1.default.parse(text);
+        if (data.status === "NOT MODIFIED") {
+            return {
+                status: "NOT MODIFIED",
+                hash: data.hash,
+            };
+        }
+        return {
+            status: "OK",
+            hash: data.hash,
+            data: data[dataKey] || [],
+        };
+    }
+    catch (error) {
+        logger.error(`Error fetching from API (${params.method}):`, error);
+        return {
+            status: "ERROR",
+            data: [],
+        };
+    }
+}
+/**
+ * Fetch competitions from LiveResults API
+ */
+async function fetchCompetitions() {
+    const response = await fetchFromAPI({ method: "getcompetitions" }, "competitions");
+    if (response.status === "OK" && response.data) {
         // Filter and sort competitions:
         // - Only include events from the last 7 days
         // - Exclude future events
         // - Sort with latest first (descending)
         const now = new Date();
         const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        const filtered = (data.competitions || [])
+        const filtered = response.data
             .filter((comp) => {
             const compDate = new Date(comp.date);
             return compDate <= now && compDate >= sevenDaysAgo;
@@ -86,156 +116,54 @@ async function fetchCompetitions() {
             .sort((a, b) => {
             return new Date(b.date).getTime() - new Date(a.date).getTime();
         });
-        logger.info(`Filtered competitions: ${filtered.length} out of ${((_a = data.competitions) === null || _a === void 0 ? void 0 : _a.length) || 0}`);
+        logger.info(`Filtered competitions: ${filtered.length} out of ${response.data.length}`);
         return {
             status: "OK",
             data: filtered,
         };
     }
-    catch (error) {
-        logger.error("Error fetching competitions:", error);
-        return {
-            status: "ERROR",
-            data: [],
-        };
-    }
+    return response;
 }
 /**
  * Fetch classes for a competition
  */
 async function fetchClasses(compId, lastHash) {
-    const url = new URL(LIVE_RESULTS_API);
-    url.searchParams.set("method", "getclasses");
-    url.searchParams.set("comp", compId.toString());
+    const params = {
+        method: "getclasses",
+        comp: compId.toString(),
+    };
     if (lastHash) {
-        url.searchParams.set("last_hash", lastHash);
+        params.last_hash = lastHash;
     }
-    try {
-        const response = await fetch(url.toString());
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        const arrayBuffer = await response.arrayBuffer();
-        const uint8Array = new Uint8Array(arrayBuffer);
-        for (let i = 0; i < uint8Array.length; i++) {
-            const byte = uint8Array[i];
-            if (byte < 0x20 && byte !== 0x09 && byte !== 0x0A && byte !== 0x0D) {
-                uint8Array[i] = 0x20;
-            }
-        }
-        const text = new TextDecoder("utf-8", { fatal: false }).decode(uint8Array);
-        const data = json5_1.default.parse(text);
-        if (data.status === "NOT MODIFIED") {
-            return {
-                status: "NOT MODIFIED",
-                hash: data.hash,
-            };
-        }
-        return {
-            status: "OK",
-            hash: data.hash,
-            data: data.classes || [],
-        };
-    }
-    catch (error) {
-        logger.error("Error fetching classes:", error);
-        return {
-            status: "ERROR",
-            data: [],
-        };
-    }
+    return fetchFromAPI(params, "classes");
 }
 /**
  * Fetch results for a specific class
  */
 async function fetchClassResults(compId, className, lastHash) {
-    const url = new URL(LIVE_RESULTS_API);
-    url.searchParams.set("method", "getclassresults");
-    url.searchParams.set("comp", compId.toString());
-    url.searchParams.set("class", className);
-    url.searchParams.set("unformattedTimes", "true");
+    const params = {
+        method: "getclassresults",
+        comp: compId.toString(),
+        class: className,
+        unformattedTimes: "false",
+    };
     if (lastHash) {
-        url.searchParams.set("last_hash", lastHash);
+        params.last_hash = lastHash;
     }
-    try {
-        const response = await fetch(url.toString());
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        const arrayBuffer = await response.arrayBuffer();
-        const uint8Array = new Uint8Array(arrayBuffer);
-        for (let i = 0; i < uint8Array.length; i++) {
-            const byte = uint8Array[i];
-            if (byte < 0x20 && byte !== 0x09 && byte !== 0x0A && byte !== 0x0D) {
-                uint8Array[i] = 0x20;
-            }
-        }
-        const text = new TextDecoder("utf-8", { fatal: false }).decode(uint8Array);
-        const data = json5_1.default.parse(text);
-        if (data.status === "NOT MODIFIED") {
-            return {
-                status: "NOT MODIFIED",
-                hash: data.hash,
-            };
-        }
-        return {
-            status: "OK",
-            hash: data.hash,
-            data: data.results || [],
-        };
-    }
-    catch (error) {
-        logger.error("Error fetching class results:", error);
-        return {
-            status: "ERROR",
-            data: [],
-        };
-    }
+    return fetchFromAPI(params, "results");
 }
 /**
  * Fetch last passings for a competition
  */
 async function fetchLastPassings(compId, lastHash) {
-    const url = new URL(LIVE_RESULTS_API);
-    url.searchParams.set("method", "getlastpassings");
-    url.searchParams.set("comp", compId.toString());
-    url.searchParams.set("unformattedTimes", "true");
+    const params = {
+        method: "getlastpassings",
+        comp: compId.toString(),
+        unformattedTimes: "false",
+    };
     if (lastHash) {
-        url.searchParams.set("last_hash", lastHash);
+        params.last_hash = lastHash;
     }
-    try {
-        const response = await fetch(url.toString());
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        const arrayBuffer = await response.arrayBuffer();
-        const uint8Array = new Uint8Array(arrayBuffer);
-        for (let i = 0; i < uint8Array.length; i++) {
-            const byte = uint8Array[i];
-            if (byte < 0x20 && byte !== 0x09 && byte !== 0x0A && byte !== 0x0D) {
-                uint8Array[i] = 0x20;
-            }
-        }
-        const text = new TextDecoder("utf-8", { fatal: false }).decode(uint8Array);
-        const data = json5_1.default.parse(text);
-        if (data.status === "NOT MODIFIED") {
-            return {
-                status: "NOT MODIFIED",
-                hash: data.hash,
-            };
-        }
-        return {
-            status: "OK",
-            hash: data.hash,
-            data: data.passings || [],
-        };
-    }
-    catch (error) {
-        logger.error("Error fetching last passings:", error);
-        return {
-            status: "ERROR",
-            data: [],
-        };
-    }
+    return fetchFromAPI(params, "passings");
 }
 //# sourceMappingURL=liveResultsClient.js.map
