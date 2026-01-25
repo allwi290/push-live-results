@@ -198,6 +198,64 @@ export const api = onRequest(
           break;
         }
 
+        case "getclubs": {
+          if (!compId) {
+            res.status(400).json({error: "Missing 'comp' parameter"});
+            return;
+          }
+
+          const cacheKey = getCacheKey({method, comp: compId});
+          const cached = await getCachedData(cacheKey, CACHE_TTL.CLUBS);
+
+          if (cached) {
+            res.json({
+              status: "OK",
+              hash: cached.hash,
+              data: cached.data,
+            });
+            return;
+          }
+
+          // Fetch all classes for the competition
+          const classesResult = await fetchClasses(compId);
+          if (classesResult.status !== "OK" || !classesResult.data) {
+            res.status(500).json({error: "Failed to fetch classes"});
+            return;
+          }
+
+          // Aggregate clubs from all class results
+          const clubMap = new Map<string, number>();
+
+          for (const raceClass of classesResult.data) {
+            const resultsResult = await fetchClassResults(compId, raceClass.className);
+            if (resultsResult.status === "OK" && resultsResult.data) {
+              for (const entry of resultsResult.data) {
+                if (entry.club) {
+                  const current = clubMap.get(entry.club) || 0;
+                  clubMap.set(entry.club, current + 1);
+                }
+              }
+            }
+          }
+
+          // Convert map to array and sort by number of runners (descending)
+          const clubs = Array.from(clubMap, ([name, runners]) => ({
+            name,
+            runners,
+          }))
+            .sort((a, b) => b.runners - a.runners);
+
+          const result = {data: clubs};
+          await setCachedData(cacheKey, Date.now().toString(), clubs);
+
+          res.json({
+            status: "OK",
+            hash: Date.now().toString(),
+            ...result,
+          });
+          break;
+        }
+
         default:
           res.status(400).json({error: `Unsupported method: ${method}`});
       }

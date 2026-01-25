@@ -3,6 +3,7 @@ import type {
   LastPassing,
   RaceClass,
   ResultEntry,
+  Club,
 } from '../types/live-results'
 
 // Points to our Firebase Cloud Functions backend API (NOT directly to external LiveResults API)
@@ -161,5 +162,18 @@ export async function fetchLastPassings(
     }
     console.warn('Failed to fetch last passings', error)
     return { passings: [] }
+  }
+}
+export async function fetchClubs(compId: number): Promise<Club[]> {
+  try {
+    const params = new URLSearchParams({
+      method: 'getclubs',
+      comp: compId.toString(),
+    })
+    const response = await fetchJson<{ data: Club[] }>(params)
+    return response.data
+  } catch (error) {
+    console.warn('Failed to fetch clubs', error)
+    return []
   }
 }

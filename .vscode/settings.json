@@ -2,5 +2,8 @@
     "cSpell.words": [
         "getcompetitions",
         "passtime"
-    ]
+    ],
+    "chat.tools.terminal.autoApprove": {
+        "firebase": true
+    }
 }

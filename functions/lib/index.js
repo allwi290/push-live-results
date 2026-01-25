@@ -196,6 +196,51 @@ exports.api = (0, https_1.onRequest)({ cors: true, maxInstances: 5 }, async (req
                 }
                 break;
             }
+            case "getclubs": {
+                if (!compId) {
+                    res.status(400).json({ error: "Missing 'comp' parameter" });
+                    return;
+                }
+                const cacheKey = (0, cache_1.getCacheKey)({ method, comp: compId });
+                const cached = await (0, cache_1.getCachedData)(cacheKey, cache_1.CACHE_TTL.CLUBS);
+                if (cached) {
+                    res.json({
+                        status: "OK",
+                        hash: cached.hash,
+                        data: cached.data,
+                    });
+                    return;
+                }
+                // Fetch all classes for the competition
+                const classesResult = await (0, liveResultsClient_1.fetchClasses)(compId);
+                if (classesResult.status !== "OK" || !classesResult.data) {
+                    res.status(500).json({ error: "Failed to fetch classes" });
+                    return;
+                }
+                // Aggregate clubs from all class results
+                const clubMap = new Map();
+                for (const raceClass of classesResult.data) {
+                    const resultsResult = await (0, liveResultsClient_1.fetchClassResults)(compId, raceClass.className);
+                    if (resultsResult.status === "OK" && resultsResult.data) {
+                        for (const entry of resultsResult.data) {
+                            if (entry.club) {
+                                const current = clubMap.get(entry.club) || 0;
+                                clubMap.set(entry.club, current + 1);
+                            }
+                        }
+                    }
+                }
+                // Convert map to array and sort by number of runners (descending)
+                const clubs = Array.from(clubMap, ([name, runners]) => ({
+                    name,
+                    runners,
+                }))
+                    .sort((a, b) => b.runners - a.runners);
+                const result = { data: clubs };
+                await (0, cache_1.setCachedData)(cacheKey, Date.now().toString(), clubs);
+                res.json(Object.assign({ status: "OK", hash: Date.now().toString() }, result));
+                break;
+            }
             default:
                 res.status(400).json({ error: `Unsupported method: ${method}` });
         }

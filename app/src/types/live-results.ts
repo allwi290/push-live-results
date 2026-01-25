@@ -43,6 +43,11 @@ export type LastPassing = {
   time: number
 }
 
+export type Club = {
+  name: string
+  runners: number
+}
+
 export type SelectionPayload = {
   userId: string
   competitionId: string
