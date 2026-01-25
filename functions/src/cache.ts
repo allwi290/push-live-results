@@ -46,8 +46,14 @@ export async function getCachedData(
     logger.info(`Cache hit for key: ${cacheKey}`);
     return data;
   } catch (error) {
-    // Silently fail for cache reads - caching is optional
-    // This is especially common during emulator startup
+    // Log cache read failures at error level
+    if (error instanceof Error && error.message.includes("NOT_FOUND")) {
+      logger.error("Firestore database not configured - cache reads will be skipped");
+    } else if (error instanceof Error) {
+      logger.error("Cache read failed: " + error.message);
+    } else {
+      logger.error("Cache read failed with unknown error");
+    }
     return null;
   }
 }
@@ -73,10 +79,15 @@ export async function setCachedData(
     await docRef.set(cachedData);
     logger.info(`Cache updated for key: ${cacheKey}`);
   } catch (error) {
-    // Silently fail for cache writes - caching is optional
-    // This is especially common during emulator startup
+    // Log cache write failures at error level
     if (error instanceof Error) {
-      logger.debug(`Cache write failed (${error.message})`);
+      if (error.message.includes("NOT_FOUND")) {
+        logger.error("Firestore database not configured - cache writes will be skipped");
+      } else {
+        logger.error("Cache write failed: " + error.message);
+      }
+    } else {
+      logger.error("Cache write failed with unknown error");
     }
   }
 }
