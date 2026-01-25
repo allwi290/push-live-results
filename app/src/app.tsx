@@ -4,6 +4,8 @@ import {
   fetchClasses,
   fetchClassResults,
   fetchCompetitions,
+  fetchClubs,
+  fetchRunnersForClub,
 } from './services/liveResults'
 import {
   listenToAuthChanges,
@@ -14,7 +16,7 @@ import {
 } from './services/firebase'
 import { saveSelection } from './services/selections'
 import { AuthModal } from './components/AuthModal'
-import type { Competition, RaceClass, ResultEntry } from './types/live-results'
+import type { Club, Competition, RaceClass, ResultEntry } from './types/live-results'
 
 type Status = { kind: 'idle' | 'info' | 'error' | 'success'; message: string }
 
@@ -28,10 +30,13 @@ export function App() {
 
   const [competitions, setCompetitions] = useState<Competition[]>([])
   const [classes, setClasses] = useState<RaceClass[]>([])
+  const [clubs, setClubs] = useState<Club[]>([])
   const [results, setResults] = useState<ResultEntry[]>([])
 
   const [competitionId, setCompetitionId] = useState<number | null>(null)
   const [className, setClassName] = useState('')
+  const [clubName, setClubName] = useState('')
+  const [selectionMode, setSelectionMode] = useState<'class' | 'club'>('class')
   const [followed, setFollowed] = useState<string[]>([])
 
   // Handle email link sign-in on mount
@@ -65,26 +70,47 @@ export function App() {
     fetchCompetitions().then(setCompetitions).catch(console.error)
   }, [])
 
-  // Pull classes when competition changes
+  // Pull classes and clubs when competition changes
   useEffect(() => {
     if (!competitionId) {
       setClasses([])
+      setClubs([])
       setClassName('')
+      setClubName('')
       return
     }
+
     fetchClasses(competitionId).then(setClasses).catch(console.error)
+    fetchClubs(competitionId).then(setClubs).catch(console.error)
   }, [competitionId])
 
-  // Pull results when class changes
+  // Pull results when class or club changes
   useEffect(() => {
-    if (!competitionId || !className) {
+    if (!competitionId) {
       setResults([])
       return
     }
-    fetchClassResults(competitionId, className)
-      .then(({ results }) => setResults(results))
-      .catch(console.error)
-  }, [competitionId, className])
+
+    if (selectionMode === 'class') {
+      if (!className) {
+        setResults([])
+        return
+      }
+      fetchClassResults(competitionId, className)
+        .then(({ results }) => setResults(results))
+        .catch(console.error)
+    } else {
+      if (!clubName || !classes.length) {
+        setResults([])
+        return
+      }
+
+      // Use the new API endpoint to fetch all club runners
+      fetchRunnersForClub(competitionId, clubName)
+        .then(setResults)
+        .catch(console.error)
+    }
+  }, [competitionId, className, clubName, selectionMode, classes])
 
   const toggleRunner = (runnerName: string) => {
     setFollowed((prev) =>
@@ -99,6 +125,13 @@ export function App() {
   const clearFollowed = () => setFollowed([])
 
   const handleSave = async () => {
+    if (selectionMode === 'club') {
+      setStatus({
+        kind: 'error',
+        message: 'Saving alerts is currently available for class selections. Please pick a class.',
+      })
+      return
+    }
     if (!user || !competitionId || !className) {
       setStatus({ kind: 'error', message: 'Complete selections first' })
       return
@@ -164,7 +197,7 @@ export function App() {
       <section class="mb-4 rounded-2xl bg-white p-4 shadow-sm">
         <div class="flex items-center justify-between">
           <h2 class="text-lg font-semibold">Select event</h2>
-          <span class="text-xs text-slate-500">Competition → Class</span>
+          <span class="text-xs text-slate-500">Competition → Class or Club</span>
         </div>
         <div class="mt-3 grid gap-3">
           <Select
@@ -177,15 +210,46 @@ export function App() {
               label: `${c.name} (${c.organizer})`,
             }))}
           />
+          <div class="flex gap-2 text-sm">
+            <button
+              class={`${buttonBase} flex-1 ${selectionMode === 'class' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700'}`}
+              onClick={() => {
+                setSelectionMode('class')
+                setClubName('')
+              }}
+            >
+              Select by Class
+            </button>
+            <button
+              class={`${buttonBase} flex-1 ${selectionMode === 'club' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700'}`}
+              onClick={() => {
+                setSelectionMode('club')
+                setClassName('')
+              }}
+            >
+              Select by Club
+            </button>
+          </div>
           <Select
             label="Class"
             value={className}
             placeholder="Choose class"
             onChange={setClassName}
-            disabled={!competitionId}
+            disabled={!competitionId || selectionMode !== 'class'}
             options={classes.map((c) => ({
               value: c.className,
               label: c.className,
+            }))}
+          />
+          <Select
+            label="Club"
+            value={clubName}
+            placeholder="Choose club"
+            onChange={setClubName}
+            disabled={!competitionId || selectionMode !== 'club'}
+            options={clubs.map((club) => ({
+              value: club.name,
+              label: `${club.name} (${club.runners})`,
             }))}
           />
         </div>
@@ -239,12 +303,12 @@ export function App() {
             )
           })}
           {!results.length && (
-            <p class="text-sm text-slate-500">Select a class to see runners.</p>
+            <p class="text-sm text-slate-500">Select a class or club to see runners.</p>
           )}
           <button
             class={`${buttonBase} mt-3 w-full bg-emerald-600 text-white disabled:opacity-50`}
             onClick={handleSave}
-            disabled={!user || !followed.length}
+            disabled={!user || !followed.length || selectionMode === 'club'}
           >
             Save & enable push alerts
           </button>

@@ -177,3 +177,22 @@ export async function fetchClubs(compId: number): Promise<Club[]> {
     return []
   }
 }
+
+export async function fetchRunnersForClub(
+  compId: number,
+  clubName: string,
+): Promise<ResultEntry[]> {
+  try {
+    const params = new URLSearchParams({
+      method: 'getrunnersforclub',
+      comp: compId.toString(),
+      club: clubName,
+    })
+    const response = await fetchJson<{ data: ResultEntry[] }>(params)
+    return response.data
+  } catch (error) {
+    console.warn('Failed to fetch runners for club', error)
+    return []
+  }
+}
+

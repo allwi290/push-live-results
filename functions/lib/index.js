@@ -241,6 +241,50 @@ exports.api = (0, https_1.onRequest)({ cors: true, maxInstances: 5 }, async (req
                 res.json(Object.assign({ status: "OK", hash: Date.now().toString() }, result));
                 break;
             }
+            case "getrunnersforclub": {
+                if (!compId) {
+                    res.status(400).json({ error: "Missing 'comp' parameter" });
+                    return;
+                }
+                const clubName = req.query.club;
+                if (!clubName) {
+                    res.status(400).json({ error: "Missing 'club' parameter" });
+                    return;
+                }
+                const cacheKey = (0, cache_1.getCacheKey)({ method, comp: compId, club: clubName });
+                const cached = await (0, cache_1.getCachedData)(cacheKey, cache_1.CACHE_TTL.CLUB_RUNNERS);
+                if (cached) {
+                    res.json({
+                        status: "OK",
+                        hash: cached.hash,
+                        data: cached.data,
+                    });
+                    return;
+                }
+                // Fetch all classes for the competition
+                const classesResult = await (0, liveResultsClient_1.fetchClasses)(compId);
+                if (classesResult.status !== "OK" || !classesResult.data) {
+                    res.status(500).json({ error: "Failed to fetch classes" });
+                    return;
+                }
+                // Aggregate runners from the specified club across all classes
+                const clubRunners = [];
+                for (const raceClass of classesResult.data) {
+                    const resultsResult = await (0, liveResultsClient_1.fetchClassResults)(compId, raceClass.className);
+                    if (resultsResult.status === "OK" && resultsResult.data) {
+                        const classRunners = resultsResult.data.filter((entry) => entry.club === clubName);
+                        // Add class information to each runner
+                        clubRunners.push(...classRunners.map((runner) => (Object.assign(Object.assign({}, runner), { className: raceClass.className }))));
+                    }
+                }
+                await (0, cache_1.setCachedData)(cacheKey, Date.now().toString(), clubRunners);
+                res.json({
+                    status: "OK",
+                    hash: Date.now().toString(),
+                    data: clubRunners,
+                });
+                break;
+            }
             default:
                 res.status(400).json({ error: `Unsupported method: ${method}` });
         }

@@ -256,6 +256,66 @@ export const api = onRequest(
           break;
         }
 
+        case "getrunnersforclub": {
+          if (!compId) {
+            res.status(400).json({error: "Missing 'comp' parameter"});
+            return;
+          }
+
+          const clubName = req.query.club as string;
+          if (!clubName) {
+            res.status(400).json({error: "Missing 'club' parameter"});
+            return;
+          }
+
+          const cacheKey = getCacheKey({method, comp: compId, club: clubName});
+          const cached = await getCachedData(cacheKey, CACHE_TTL.CLUB_RUNNERS);
+
+          if (cached) {
+            res.json({
+              status: "OK",
+              hash: cached.hash,
+              data: cached.data,
+            });
+            return;
+          }
+
+          // Fetch all classes for the competition
+          const classesResult = await fetchClasses(compId);
+          if (classesResult.status !== "OK" || !classesResult.data) {
+            res.status(500).json({error: "Failed to fetch classes"});
+            return;
+          }
+
+          // Aggregate runners from the specified club across all classes
+          const clubRunners: ResultEntry[] = [];
+
+          for (const raceClass of classesResult.data) {
+            const resultsResult = await fetchClassResults(compId, raceClass.className);
+            if (resultsResult.status === "OK" && resultsResult.data) {
+              const classRunners = resultsResult.data.filter(
+                (entry) => entry.club === clubName
+              );
+              // Add class information to each runner
+              clubRunners.push(
+                ...classRunners.map((runner) => ({
+                  ...runner,
+                  className: raceClass.className,
+                }))
+              );
+            }
+          }
+
+          await setCachedData(cacheKey, Date.now().toString(), clubRunners);
+
+          res.json({
+            status: "OK",
+            hash: Date.now().toString(),
+            data: clubRunners,
+          });
+          break;
+        }
+
         default:
           res.status(400).json({error: `Unsupported method: ${method}`});
       }
