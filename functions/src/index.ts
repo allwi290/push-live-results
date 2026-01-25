@@ -56,11 +56,13 @@ export const api = onRequest(
           const cached = await getCachedData(cacheKey, CACHE_TTL.COMPETITIONS);
 
           if (cached && lastHash && cached.hash === lastHash) {
+            logger.info("Cache HIT (NOT MODIFIED) for getcompetitions");
             res.json({status: "NOT MODIFIED", hash: cached.hash});
             return;
           }
 
           if (cached) {
+            logger.info("Cache HIT for getcompetitions");
             res.json({
               status: "OK",
               hash: cached.hash,
@@ -69,9 +71,11 @@ export const api = onRequest(
             return;
           }
 
+          logger.info("Cache MISS for getcompetitions - fetching fresh data");
           const compsResult = await fetchCompetitions();
           if (compsResult.status === "OK" && compsResult.data) {
             await setCachedData(cacheKey, Date.now().toString(), compsResult.data);
+            logger.info("Cached getcompetitions result: competitions=" + compsResult.data.length);
             res.json({
               status: "OK",
               hash: Date.now().toString(),
@@ -93,11 +97,13 @@ export const api = onRequest(
           const cached = await getCachedData(cacheKey, CACHE_TTL.CLASSES);
 
           if (cached && lastHash && cached.hash === lastHash) {
+            logger.info("Cache HIT (NOT MODIFIED) for getclasses: comp=" + compId);
             res.json({status: "NOT MODIFIED", hash: cached.hash});
             return;
           }
 
           if (cached) {
+            logger.info("Cache HIT for getclasses: comp=" + compId);
             res.json({
               status: "OK",
               hash: cached.hash,
@@ -106,9 +112,11 @@ export const api = onRequest(
             return;
           }
 
+          logger.info("Cache MISS for getclasses: comp=" + compId + " - fetching fresh data");
           const classesResult = await fetchClasses(compId, lastHash);
           if (classesResult.status === "OK" && classesResult.data && classesResult.hash) {
             await setCachedData(cacheKey, classesResult.hash, classesResult.data);
+            logger.info("Cached getclasses result: comp=" + compId + ", classes=" + classesResult.data.length);
             res.json(classesResult);
           } else if (classesResult.status === "NOT MODIFIED") {
             res.json(classesResult);
@@ -128,8 +136,13 @@ export const api = onRequest(
           const cached = await getCachedData(cacheKey, CACHE_TTL.CLASS_RESULTS);
 
           if (cached && lastHash && cached.hash === lastHash) {
+            logger.info("Cache HIT (NOT MODIFIED) for getclassresults: comp=" + compId + ", class=" + className);
             res.json({status: "NOT MODIFIED", hash: cached.hash});
             return;
+          }
+
+          if (cached) {
+            logger.info("Cache HIT for getclassresults: comp=" + compId + ", class=" + className);
           }
 
           const resultsResult = await fetchClassResults(compId, className, lastHash);
@@ -143,9 +156,12 @@ export const api = onRequest(
                 cached.data as ResultEntry[],
                 resultsResult.data
               );
+            } else if (!cached) {
+              logger.info("Cache MISS for getclassresults: comp=" + compId + ", class=" + className + " - fetching fresh data");
             }
 
             await setCachedData(cacheKey, resultsResult.hash, resultsResult.data);
+            logger.info("Cached getclassresults result: comp=" + compId + ", class=" + className + ", results=" + resultsResult.data.length);
             res.json(resultsResult);
           } else if (resultsResult.status === "NOT MODIFIED") {
             if (cached) {
@@ -173,11 +189,13 @@ export const api = onRequest(
           const cached = await getCachedData(cacheKey, CACHE_TTL.LAST_PASSINGS);
 
           if (cached && lastHash && cached.hash === lastHash) {
+            logger.info("Cache HIT (NOT MODIFIED) for getlastpassings: comp=" + compId);
             res.json({status: "NOT MODIFIED", hash: cached.hash});
             return;
           }
 
           if (cached) {
+            logger.info("Cache HIT for getlastpassings: comp=" + compId);
             res.json({
               status: "OK",
               hash: cached.hash,
@@ -186,9 +204,11 @@ export const api = onRequest(
             return;
           }
 
+          logger.info("Cache MISS for getlastpassings: comp=" + compId + " - fetching fresh data");
           const passingsResult = await fetchLastPassings(compId, lastHash);
           if (passingsResult.status === "OK" && passingsResult.data && passingsResult.hash) {
             await setCachedData(cacheKey, passingsResult.hash, passingsResult.data);
+            logger.info("Cached getlastpassings result: comp=" + compId + ", passings=" + passingsResult.data.length);
             res.json(passingsResult);
           } else if (passingsResult.status === "NOT MODIFIED") {
             res.json(passingsResult);
@@ -208,6 +228,7 @@ export const api = onRequest(
           const cached = await getCachedData(cacheKey, CACHE_TTL.CLUBS);
 
           if (cached) {
+            logger.info("Cache HIT for getclubs: comp=" + compId);
             res.json({
               status: "OK",
               hash: cached.hash,
@@ -215,6 +236,8 @@ export const api = onRequest(
             });
             return;
           }
+
+          logger.info("Cache MISS for getclubs: comp=" + compId + " - fetching fresh data");
 
           // Fetch all classes for the competition
           const classesResult = await fetchClasses(compId);
@@ -247,6 +270,7 @@ export const api = onRequest(
 
           const result = {data: clubs};
           await setCachedData(cacheKey, Date.now().toString(), clubs);
+          logger.info("Cached getclubs result: comp=" + compId + ", clubs=" + clubs.length);
 
           res.json({
             status: "OK",
@@ -272,6 +296,7 @@ export const api = onRequest(
           const cached = await getCachedData(cacheKey, CACHE_TTL.CLUB_RUNNERS);
 
           if (cached) {
+            logger.info("Cache HIT for getrunnersforclub: comp=" + compId + ", club=" + clubName);
             res.json({
               status: "OK",
               hash: cached.hash,
@@ -279,6 +304,8 @@ export const api = onRequest(
             });
             return;
           }
+
+          logger.info("Cache MISS for getrunnersforclub: comp=" + compId + ", club=" + clubName + " - fetching fresh data");
 
           // Fetch all classes for the competition
           const classesResult = await fetchClasses(compId);
@@ -307,6 +334,7 @@ export const api = onRequest(
           }
 
           await setCachedData(cacheKey, Date.now().toString(), clubRunners);
+          logger.info("Cached getrunnersforclub result: comp=" + compId + ", club=" + clubName + ", runners=" + clubRunners.length);
 
           res.json({
             status: "OK",
