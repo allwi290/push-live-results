@@ -54,19 +54,8 @@ export function App() {
 
   // Auth listener
   useEffect(() => {
-    const unsub = listenToAuthChanges(async (next) => {
+    const unsub = listenToAuthChanges((next) => {
       setUser(next)
-      if (next) {
-        try {
-          await requestNotificationPermission()
-          setStatus({ kind: 'success', message: 'Push notifications ready' })
-        } catch {
-          setStatus({
-            kind: 'error',
-            message: 'Enable push notifications to get runner alerts',
-          })
-        }
-      }
     })
     return () => unsub()
   }, [])
@@ -116,6 +105,17 @@ export function App() {
     }
     setStatus({ kind: 'info', message: 'Saving your follows…' })
     try {
+      // Request notification permission when saving
+      try {
+        await requestNotificationPermission()
+      } catch {
+        setStatus({
+          kind: 'error',
+          message: 'Enable push notifications to receive runner alerts',
+        })
+        return
+      }
+
       await saveSelection({
         userId: user.uid,
         competitionId: competitionId.toString(),
