@@ -306,7 +306,7 @@ export function App() {
               </div>
             </div>
           )}
-          {!loadingResults && results.map((result) => {
+          {!loadingResults && [...results].sort((a, b) => a.name.localeCompare(b.name)).map((result) => {
             const checked = followed.includes(result.name)
             return (
               <button
