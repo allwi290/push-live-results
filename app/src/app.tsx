@@ -248,28 +248,32 @@ export function App() {
               Select by Club
             </button>
           </div>
-          <Select
-            label="Class"
-            value={className}
-            placeholder="Choose class"
-            onChange={setClassName}
-            disabled={!competitionId || selectionMode !== 'class'}
-            options={classes.map((c) => ({
-              value: c.className,
-              label: c.className,
-            }))}
-          />
-          <Select
-            label="Club"
-            value={clubName}
-            placeholder="Choose club"
-            onChange={setClubName}
-            disabled={!competitionId || selectionMode !== 'club'}
-            options={clubs.map((club) => ({
-              value: club.name,
-              label: `${club.name} (${club.runners})`,
-            }))}
-          />
+          {selectionMode === 'class' && (
+            <Select
+              label="Class"
+              value={className}
+              placeholder="Choose class"
+              onChange={setClassName}
+              disabled={!competitionId}
+              options={classes.map((c) => ({
+                value: c.className,
+                label: c.className,
+              }))}
+            />
+          )}
+          {selectionMode === 'club' && (
+            <Select
+              label="Club"
+              value={clubName}
+              placeholder="Choose club"
+              onChange={setClubName}
+              disabled={!competitionId}
+              options={clubs.map((club) => ({
+                value: club.name,
+                label: `${club.name} (${club.runners})`,
+              }))}
+            />
+          )}
         </div>
       </section>
 
