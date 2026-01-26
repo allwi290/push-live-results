@@ -151,15 +151,16 @@ export function App() {
       setShowAuthModal(true)
       return
     }
-    
+
     if (selectionMode === 'club') {
       setStatus({
         kind: 'error',
-        message: 'Saving alerts is currently available for class selections. Please pick a class.',
+        message:
+          'Saving alerts is currently available for class selections. Please pick a class.',
       })
       return
     }
-    
+
     if (!competitionId || !className) {
       setStatus({ kind: 'error', message: 'Please select a competition and class first' })
       return
@@ -184,26 +185,16 @@ export function App() {
     const newFollowed = isAdding
       ? [...followed, runnerName]
       : followed.filter((name) => name !== runnerName)
-    
+
     setFollowed(newFollowed)
     setStatus({ kind: 'info', message: 'Saving…' })
 
     // Save to backend
     try {
       if (isAdding) {
-        await addSelection(
-          user.uid,
-          competitionId.toString(),
-          className,
-          runnerName
-        )
+        await addSelection(user.uid, competitionId.toString(), className, runnerName)
       } else {
-        await removeSelection(
-          user.uid,
-          competitionId.toString(),
-          className,
-          runnerName
-        )
+        await removeSelection(user.uid, competitionId.toString(), className, runnerName)
       }
       setStatus({ kind: 'success', message: 'Saved' })
       // Clear success message after 2 seconds
@@ -230,7 +221,9 @@ export function App() {
         <div class="text-right">
           {user ? (
             <>
-              <p class="text-sm font-medium">{user.displayName || user.email || 'Account'}</p>
+              <p class="text-sm font-medium">
+                {user.displayName || user.email || 'Account'}
+              </p>
               <button
                 class={`${buttonBase} bg-slate-100 text-slate-700`}
                 onClick={signOutUser}
@@ -292,7 +285,11 @@ export function App() {
             <Select
               label="Class"
               value={className}
-              placeholder={classes.length === 0 && competitionId ? "No classes available" : "Choose class"}
+              placeholder={
+                classes.length === 0 && competitionId
+                  ? 'No classes available'
+                  : 'Choose class'
+              }
               onChange={setClassName}
               disabled={!competitionId}
               options={classes.map((c) => ({
@@ -305,7 +302,9 @@ export function App() {
             <Select
               label="Club"
               value={clubName}
-              placeholder={clubs.length === 0 && competitionId ? "No clubs available" : "Choose club"}
+              placeholder={
+                clubs.length === 0 && competitionId ? 'No clubs available' : 'Choose club'
+              }
               onChange={setClubName}
               disabled={!competitionId}
               options={clubs.map((club) => ({
@@ -333,7 +332,7 @@ export function App() {
             }`}
             onClick={() => {
               if (sortField === 'name') {
-                setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')
+                setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
               } else {
                 setSortField('name')
                 setSortDirection('asc')
@@ -351,7 +350,7 @@ export function App() {
             }`}
             onClick={() => {
               if (sortField === 'secondary') {
-                setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')
+                setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
               } else {
                 setSortField('secondary')
                 setSortDirection('asc')
@@ -359,7 +358,8 @@ export function App() {
             }}
             disabled={!results.length || loadingResults}
           >
-            {selectionMode === 'class' ? 'Club' : 'Class'} {sortField === 'secondary' && (sortDirection === 'asc' ? '↑' : '↓')}
+            {selectionMode === 'class' ? 'Club' : 'Class'}{' '}
+            {sortField === 'secondary' && (sortDirection === 'asc' ? '↑' : '↓')}
           </button>
         </div>
         <div class="mt-3 grid gap-2">
@@ -371,54 +371,62 @@ export function App() {
               </div>
             </div>
           )}
-          {!loadingResults && [...results].sort((a, b) => {
-            if (sortField === 'name') {
-              // Sort by name
-              return sortDirection === 'asc'
-                ? a.name.localeCompare(b.name)
-                : b.name.localeCompare(a.name)
-            } else {
-              // Sort by club or class
-              const fieldA = selectionMode === 'class' ? (a.club || '') : (a.className || '')
-              const fieldB = selectionMode === 'class' ? (b.club || '') : (b.className || '')
-              
-              const compare = sortDirection === 'asc'
-                ? fieldA.localeCompare(fieldB)
-                : fieldB.localeCompare(fieldA)
-              
-              // Use name as tiebreaker
-              return compare !== 0 ? compare : a.name.localeCompare(b.name)
-            }
-          }).map((result) => {
-            const checked = followed.includes(result.name)
-            return (
-              <button
-                key={result.name}
-                onClick={() => toggleRunner(result.name)}
-                class={`flex items-center justify-between rounded-xl border px-3 py-3 text-left text-sm transition ${
-                  checked
-                    ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
-                    : 'border-slate-200 bg-white text-slate-900'
-                }`}
-              >
-                <div>
-                  <p class="font-semibold">{result.name}</p>
-                  {result.club && <p class="text-xs text-slate-500">{result.club}</p>}
-                  {result.className && <p class="text-xs text-slate-400">{result.className}</p>}
-                </div>
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  aria-label={`Follow ${result.name}`}
-                  class="h-4 w-4 rounded border-slate-300 text-emerald-600"
-                  readOnly
-                />
-              </button>
-            )
-          })}
+          {!loadingResults &&
+            [...results]
+              .sort((a, b) => {
+                if (sortField === 'name') {
+                  // Sort by name
+                  return sortDirection === 'asc'
+                    ? a.name.localeCompare(b.name)
+                    : b.name.localeCompare(a.name)
+                } else {
+                  // Sort by club or class
+                  const fieldA =
+                    selectionMode === 'class' ? a.club || '' : a.className || ''
+                  const fieldB =
+                    selectionMode === 'class' ? b.club || '' : b.className || ''
+
+                  const compare =
+                    sortDirection === 'asc'
+                      ? fieldA.localeCompare(fieldB)
+                      : fieldB.localeCompare(fieldA)
+
+                  // Use name as tiebreaker
+                  return compare !== 0 ? compare : a.name.localeCompare(b.name)
+                }
+              })
+              .map((result) => {
+                const checked = followed.includes(result.name)
+                return (
+                  <button
+                    key={result.name}
+                    onClick={() => toggleRunner(result.name)}
+                    class={`flex items-center justify-between rounded-xl border px-3 py-3 text-left text-sm transition ${
+                      checked
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                        : 'border-slate-200 bg-white text-slate-900'
+                    }`}
+                  >
+                    <div>
+                      <p class="font-semibold">{result.name}</p>
+                      {result.club && <p class="text-xs text-slate-500">{result.club}</p>}
+                      {result.className && (
+                        <p class="text-xs text-slate-400">{result.className}</p>
+                      )}
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      aria-label={`Follow ${result.name}`}
+                      class="h-4 w-4 rounded border-slate-300 text-emerald-600"
+                      readOnly
+                    />
+                  </button>
+                )
+              })}
           {!loadingResults && !results.length && (
             <p class="text-sm text-slate-500">
-              {user 
+              {user
                 ? 'Select a class or club to see runners.'
                 : 'Sign in and select a class to follow runners.'}
             </p>
@@ -445,41 +453,45 @@ export function App() {
           <span class="text-xs text-slate-500">Updated as data arrives</span>
         </div>
         <div class="mt-3 space-y-2">
-          {results.map((result) => {
-            const statusText = getStatusText(result.status)
-            const isOK = result.status === 0
-            const inProgress = result.progress < 100
-            return (
-              <article
-                key={result.name}
-                class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3"
-              >
-                <div class="flex items-center justify-between text-sm">
-                  <div>
-                    <p class="font-semibold">{result.name}</p>
-                    <p class="text-xs text-slate-500">{result.club || '—'}</p>
-                  </div>
-                  <div class="text-right text-xs text-slate-600">
-                    <p>{statusText}</p>
-                    {isOK && <p>Pos {result.place}</p>}
-                  </div>
-                </div>
-                {isOK && (
-                  <>
-                    <div class="mt-2 grid grid-cols-2 text-xs text-slate-600">
-                      <span>Result: {result.result}</span>
-                      <span class="text-right">{result.timeplus}</span>
+          {results
+            .sort((a, b) => {
+              return a.status - b.status
+            })
+            .map((result) => {
+              const statusText = getStatusText(result.status)
+              const isOK = result.status === 0
+              const inProgress = result.progress < 100
+              return (
+                <article
+                  key={result.name}
+                  class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3"
+                >
+                  <div class="flex items-center justify-between text-sm">
+                    <div>
+                      <p class="font-semibold">{result.name}</p>
+                      <p class="text-xs text-slate-500">{result.club || '—'}</p>
                     </div>
-                    {inProgress && (
-                      <p class="mt-1 text-[11px] text-slate-400">
-                        Progress: {result.progress}%
-                      </p>
-                    )}
-                  </>
-                )}
-              </article>
-            )
-          })}
+                    <div class="text-right text-xs text-slate-600">
+                      <p>{statusText}</p>
+                      {isOK && <p>Pos {result.place}</p>}
+                    </div>
+                  </div>
+                  {isOK && (
+                    <>
+                      <div class="mt-2 grid grid-cols-2 text-xs text-slate-600">
+                        <span>Result: {result.result}</span>
+                        <span class="text-right">{result.timeplus}</span>
+                      </div>
+                      {inProgress && (
+                        <p class="mt-1 text-[11px] text-slate-400">
+                          Progress: {result.progress}%
+                        </p>
+                      )}
+                    </>
+                  )}
+                </article>
+              )
+            })}
           {!results.length && (
             <p class="text-sm text-slate-500">Select a class to see live results.</p>
           )}
@@ -515,18 +527,28 @@ function formatDateLabel(dateStr: string): string {
 
   const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate())
   const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate())
-  const yesterdayOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate())
+  const yesterdayOnly = new Date(
+    yesterday.getFullYear(),
+    yesterday.getMonth(),
+    yesterday.getDate(),
+  )
 
   if (dateOnly.getTime() === todayOnly.getTime()) {
     return 'Today'
   } else if (dateOnly.getTime() === yesterdayOnly.getTime()) {
     return 'Yesterday'
   } else {
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    })
   }
 }
 
-function groupCompetitionsByDate(competitions: Competition[]): { label: string; competitions: Competition[] }[] {
+function groupCompetitionsByDate(
+  competitions: Competition[],
+): { label: string; competitions: Competition[] }[] {
   const groups: Record<string, Competition[]> = {}
 
   competitions.forEach((comp) => {
@@ -539,7 +561,9 @@ function groupCompetitionsByDate(competitions: Competition[]): { label: string; 
 
   // Order: Today, Yesterday, then others by date descending
   const order = ['Today', 'Yesterday']
-  const otherDates = Object.keys(groups).filter((key) => !order.includes(key)).sort()
+  const otherDates = Object.keys(groups)
+    .filter((key) => !order.includes(key))
+    .sort()
   const sortedKeys = [...order.filter((key) => groups[key]), ...otherDates]
 
   return sortedKeys.map((label) => ({
@@ -577,23 +601,21 @@ function Select({ label, value, placeholder, options, onChange, disabled }: Sele
         <option value="" disabled>
           {placeholder}
         </option>
-        {isGrouped(options) ? (
-          options.map((group) => (
-            <optgroup key={group.label} label={group.label}>
-              {group.options.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </optgroup>
-          ))
-        ) : (
-          options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))
-        )}
+        {isGrouped(options)
+          ? options.map((group) => (
+              <optgroup key={group.label} label={group.label}>
+                {group.options.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </optgroup>
+            ))
+          : options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
       </select>
     </label>
   )
