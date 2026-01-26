@@ -516,7 +516,7 @@ function getStatusText(status: number): string {
     11: 'Walk Over',
     12: 'Moved Up',
   }
-  return statusMap[status] || 'Unknown'
+  return statusMap[status]
 }
 
 function formatDateLabel(dateStr: string): string {
