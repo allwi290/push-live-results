@@ -32,6 +32,7 @@ export function App() {
   const [classes, setClasses] = useState<RaceClass[]>([])
   const [clubs, setClubs] = useState<Club[]>([])
   const [results, setResults] = useState<ResultEntry[]>([])
+  const [loadingResults, setLoadingResults] = useState(false)
 
   const [competitionId, setCompetitionId] = useState<number | null>(null)
   const [className, setClassName] = useState('')
@@ -88,27 +89,44 @@ export function App() {
   useEffect(() => {
     if (!competitionId) {
       setResults([])
+      setLoadingResults(false)
       return
     }
 
     if (selectionMode === 'class') {
       if (!className) {
         setResults([])
+        setLoadingResults(false)
         return
       }
+      setLoadingResults(true)
       fetchClassResults(competitionId, className)
-        .then(({ results }) => setResults(results))
-        .catch(console.error)
+        .then(({ results }) => {
+          setResults(results)
+          setLoadingResults(false)
+        })
+        .catch((err) => {
+          console.error(err)
+          setLoadingResults(false)
+        })
     } else {
       if (!clubName || !classes.length) {
         setResults([])
+        setLoadingResults(false)
         return
       }
 
+      setLoadingResults(true)
       // Use the new API endpoint to fetch all club runners
       fetchRunnersForClub(competitionId, clubName)
-        .then(setResults)
-        .catch(console.error)
+        .then((res) => {
+          setResults(res)
+          setLoadingResults(false)
+        })
+        .catch((err) => {
+          console.error(err)
+          setLoadingResults(false)
+        })
     }
   }, [competitionId, className, clubName, selectionMode, classes])
 
@@ -269,14 +287,22 @@ export function App() {
             <button
               class={`${buttonBase} bg-emerald-50 text-emerald-700`}
               onClick={followAll}
-              disabled={!results.length}
+              disabled={!results.length || loadingResults}
             >
               Follow all
             </button>
           </div>
         </div>
         <div class="mt-3 grid gap-2">
-          {results.map((result) => {
+          {loadingResults && (
+            <div class="flex items-center justify-center py-6">
+              <div class="flex flex-col items-center gap-2">
+                <div class="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-emerald-600"></div>
+                <p class="text-sm text-slate-500">Loading runners…</p>
+              </div>
+            </div>
+          )}
+          {!loadingResults && results.map((result) => {
             const checked = followed.includes(result.name)
             return (
               <button
@@ -302,7 +328,7 @@ export function App() {
               </button>
             )
           })}
-          {!results.length && (
+          {!loadingResults && !results.length && (
             <p class="text-sm text-slate-500">Select a class or club to see runners.</p>
           )}
           <button
