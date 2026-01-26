@@ -223,9 +223,12 @@ export function App() {
             value={competitionId?.toString() || ''}
             placeholder="Choose competition"
             onChange={(val) => setCompetitionId(val ? Number(val) : null)}
-            options={competitions.map((c) => ({
-              value: c.id.toString(),
-              label: `${c.name} (${c.organizer})`,
+            options={groupCompetitionsByDate(competitions).map((group) => ({
+              label: group.label,
+              options: group.competitions.map((c) => ({
+                value: c.id.toString(),
+                label: `${c.name} (${c.organizer})`,
+              })),
             }))}
           />
           <div class="flex gap-2 text-sm">
@@ -424,13 +427,61 @@ function getStatusText(status: number): string {
   return statusMap[status] || 'Unknown'
 }
 
+function formatDateLabel(dateStr: string): string {
+  const date = new Date(dateStr)
+  const today = new Date()
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+
+  const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const yesterdayOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate())
+
+  if (dateOnly.getTime() === todayOnly.getTime()) {
+    return 'Today'
+  } else if (dateOnly.getTime() === yesterdayOnly.getTime()) {
+    return 'Yesterday'
+  } else {
+    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+  }
+}
+
+function groupCompetitionsByDate(competitions: Competition[]): { label: string; competitions: Competition[] }[] {
+  const groups: Record<string, Competition[]> = {}
+
+  competitions.forEach((comp) => {
+    const label = formatDateLabel(comp.date)
+    if (!groups[label]) {
+      groups[label] = []
+    }
+    groups[label].push(comp)
+  })
+
+  // Order: Today, Yesterday, then others by date descending
+  const order = ['Today', 'Yesterday']
+  const otherDates = Object.keys(groups).filter((key) => !order.includes(key)).sort()
+  const sortedKeys = [...order.filter((key) => groups[key]), ...otherDates]
+
+  return sortedKeys.map((label) => ({
+    label,
+    competitions: groups[label],
+  }))
+}
+
+type SelectOption = { value: string; label: string }
+type SelectGroup = { label: string; options: SelectOption[] }
+
 type SelectProps = {
   label: string
   value: string
   placeholder: string
-  options: { value: string; label: string }[]
+  options: SelectOption[] | SelectGroup[]
   onChange: (value: string) => void
   disabled?: boolean
+}
+
+function isGrouped(options: SelectOption[] | SelectGroup[]): options is SelectGroup[] {
+  return options.length > 0 && 'options' in options[0]
 }
 
 function Select({ label, value, placeholder, options, onChange, disabled }: SelectProps) {
@@ -446,11 +497,23 @@ function Select({ label, value, placeholder, options, onChange, disabled }: Sele
         <option value="" disabled>
           {placeholder}
         </option>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
+        {isGrouped(options) ? (
+          options.map((group) => (
+            <optgroup key={group.label} label={group.label}>
+              {group.options.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </optgroup>
+          ))
+        ) : (
+          options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))
+        )}
       </select>
     </label>
   )
