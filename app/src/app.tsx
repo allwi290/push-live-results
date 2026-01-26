@@ -317,6 +317,7 @@ export function App() {
                 <div>
                   <p class="font-semibold">{result.name}</p>
                   {result.club && <p class="text-xs text-slate-500">{result.club}</p>}
+                  {result.className && <p class="text-xs text-slate-400">Class: {result.className}</p>}
                 </div>
                 <input
                   type="checkbox"

@@ -21,6 +21,7 @@ export type Runner = {
   timeplus: string
   progress: number
   start: number
+  className?: string
 }
 
 export type ResultEntry = {
@@ -32,6 +33,7 @@ export type ResultEntry = {
   timeplus: string
   progress: number
   start: number
+  className?: string
 }
 
 export type LastPassing = {
