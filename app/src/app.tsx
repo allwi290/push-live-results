@@ -469,8 +469,8 @@ export function App() {
                   <div class="flex items-center justify-between text-sm">
                     <div>
                       <p class="font-semibold">{result.name}</p>
-                      <p class="text-xs text-slate-500">{result.className || '—'}</p>
                       <p class="text-xs text-slate-500">{result.club || '—'}</p>
+                      <p class="text-xs text-slate-400">{result.className}</p>
                     </div>
                     <div class="text-right text-xs text-slate-600">
                       {isOK ? <p>Pos {result.place}</p> : <p>{statusText}</p>}
