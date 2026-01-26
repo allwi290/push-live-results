@@ -367,6 +367,7 @@ export function App() {
         <div class="mt-3 space-y-2">
           {results.map((result) => {
             const statusText = getStatusText(result.status)
+            const isOK = result.status === 0
             return (
               <article
                 key={result.name}
@@ -379,16 +380,20 @@ export function App() {
                   </div>
                   <div class="text-right text-xs text-slate-600">
                     <p>{statusText}</p>
-                    <p>Pos {result.place}</p>
+                    {isOK && <p>Pos {result.place}</p>}
                   </div>
                 </div>
-                <div class="mt-2 grid grid-cols-2 text-xs text-slate-600">
-                  <span>Result: {result.result}</span>
-                  <span class="text-right">{result.timeplus}</span>
-                </div>
-                <p class="mt-1 text-[11px] text-slate-400">
-                  Progress: {result.progress}%
-                </p>
+                {isOK && (
+                  <>
+                    <div class="mt-2 grid grid-cols-2 text-xs text-slate-600">
+                      <span>Result: {result.result}</span>
+                      <span class="text-right">{result.timeplus}</span>
+                    </div>
+                    <p class="mt-1 text-[11px] text-slate-400">
+                      Progress: {result.progress}%
+                    </p>
+                  </>
+                )}
               </article>
             )
           })}
