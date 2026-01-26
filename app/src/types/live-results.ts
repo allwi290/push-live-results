@@ -54,6 +54,6 @@ export type SelectionPayload = {
   userId: string
   competitionId: string
   className: string
-  runnerNames: string[]
+  runnerName: string
   createdAt: number
 }

@@ -1,10 +1,12 @@
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore'
+import { doc, serverTimestamp, writeBatch } from 'firebase/firestore'
 import { db, requestNotificationPermission } from './firebase'
-import type { SelectionPayload } from '../types/live-results'
 
-export async function saveSelection(payload: SelectionPayload) {
-  const id = `${payload.userId}-${payload.competitionId}-${payload.className}`
-  
+export async function saveSelections(
+  userId: string,
+  competitionId: string,
+  className: string,
+  runnerNames: string[]
+) {
   // Get FCM token for push notifications
   let fcmToken: string | undefined
   try {
@@ -12,10 +14,22 @@ export async function saveSelection(payload: SelectionPayload) {
   } catch (error) {
     console.warn('Could not get FCM token:', error)
   }
-  
-  await setDoc(doc(db, 'selections', id), {
-    ...payload,
-    fcmToken,
-    createdAt: serverTimestamp(),
-  })
+
+  const batch = writeBatch(db)
+
+  for (const runnerName of runnerNames) {
+    const id = `${userId}-${competitionId}-${className}-${runnerName.replace(/[^a-zA-Z0-9]/g, '_')}`
+    const docRef = doc(db, 'selections', id)
+    
+    batch.set(docRef, {
+      userId,
+      competitionId,
+      className,
+      runnerName,
+      fcmToken,
+      createdAt: serverTimestamp(),
+    })
+  }
+
+  await batch.commit()
 }

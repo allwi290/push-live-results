@@ -2,7 +2,8 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow authenticated users to read/write their own selections
+    // Allow authenticated users to read/write their own runner selections
+    // Document IDs follow pattern: userId-competitionId-className-runnerName
     match /selections/{selectionId} {
       allow read, write: if request.auth != null 
         && selectionId.matches('^' + request.auth.uid + '-.*');

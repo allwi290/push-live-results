@@ -14,7 +14,7 @@ import {
   checkForEmailLink,
   completeEmailLinkSignIn,
 } from './services/firebase'
-import { saveSelection } from './services/selections'
+import { saveSelections } from './services/selections'
 import { AuthModal } from './components/AuthModal'
 import type { Club, Competition, RaceClass, ResultEntry } from './types/live-results'
 
@@ -167,13 +167,12 @@ export function App() {
         return
       }
 
-      await saveSelection({
-        userId: user.uid,
-        competitionId: competitionId.toString(),
+      await saveSelections(
+        user.uid,
+        competitionId.toString(),
         className,
-        runnerNames: followed,
-        createdAt: Date.now(),
-      })
+        followed
+      )
       setStatus({ kind: 'success', message: 'Saved. Push alerts will follow.' })
     } catch (error) {
       setStatus({ kind: 'error', message: 'Could not save follows just now.' })
