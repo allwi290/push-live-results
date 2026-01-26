@@ -469,11 +469,11 @@ export function App() {
                   <div class="flex items-center justify-between text-sm">
                     <div>
                       <p class="font-semibold">{result.name}</p>
+                      <p class="text-xs text-slate-500">{result.className || '—'}</p>
                       <p class="text-xs text-slate-500">{result.club || '—'}</p>
                     </div>
                     <div class="text-right text-xs text-slate-600">
-                      <p>{statusText}</p>
-                      {isOK && <p>Pos {result.place}</p>}
+                      {isOK ? <p>Pos {result.place}</p> : <p>{statusText}</p>}
                     </div>
                   </div>
                   {isOK && (
@@ -505,7 +505,7 @@ export function App() {
 
 function getStatusText(status: number): string {
   const statusMap: Record<number, string> = {
-    0: '', //OK - Do not print
+    0: 'OK',
     1: 'Did not start', //DNS
     2: 'Did not finished', //DNF
     3: 'Missing punch', //MP
@@ -516,7 +516,7 @@ function getStatusText(status: number): string {
     11: 'Walk Over',
     12: 'Moved Up',
   }
-  return statusMap[status]
+  return statusMap[status] || 'Unknown'  
 }
 
 function formatDateLabel(dateStr: string): string {
