@@ -252,9 +252,9 @@ export function App() {
             <Select
               label="Class"
               value={className}
-              placeholder="Choose class"
+              placeholder={classes.length === 0 && competitionId ? "No classes available" : "Choose class"}
               onChange={setClassName}
-              disabled={!competitionId}
+              disabled={!competitionId || classes.length === 0}
               options={classes.map((c) => ({
                 value: c.className,
                 label: c.className,
@@ -265,9 +265,9 @@ export function App() {
             <Select
               label="Club"
               value={clubName}
-              placeholder="Choose club"
+              placeholder={clubs.length === 0 && competitionId ? "No clubs available" : "Choose club"}
               onChange={setClubName}
-              disabled={!competitionId}
+              disabled={!competitionId || clubs.length === 0}
               options={clubs.map((club) => ({
                 value: club.name,
                 label: `${club.name} (${club.runners})`,
