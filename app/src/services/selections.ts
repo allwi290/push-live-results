@@ -1,11 +1,11 @@
-import { doc, serverTimestamp, writeBatch, collection, query, where, getDocs } from 'firebase/firestore'
+import { doc, serverTimestamp, setDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore'
 import { db, requestNotificationPermission } from './firebase'
 
-export async function saveSelections(
+export async function addSelection(
   userId: string,
   competitionId: string,
   className: string,
-  runnerNames: string[]
+  runnerName: string
 ): Promise<void> {
   // Get FCM token for push notifications
   let fcmToken: string | undefined
@@ -15,23 +15,28 @@ export async function saveSelections(
     console.warn('Could not get FCM token:', error)
   }
 
-  const batch = writeBatch(db)
+  const id = `${userId}-${competitionId}-${className}-${runnerName.replace(/[^a-zA-Z0-9]/g, '_')}`
+  const docRef = doc(db, 'selections', id)
+  
+  await setDoc(docRef, {
+    userId,
+    competitionId,
+    className,
+    runnerName,
+    fcmToken,
+    createdAt: serverTimestamp(),
+  })
+}
 
-  for (const runnerName of runnerNames) {
-    const id = `${userId}-${competitionId}-${className}-${runnerName.replace(/[^a-zA-Z0-9]/g, '_')}`
-    const docRef = doc(db, 'selections', id)
-    
-    batch.set(docRef, {
-      userId,
-      competitionId,
-      className,
-      runnerName,
-      fcmToken,
-      createdAt: serverTimestamp(),
-    })
-  }
-
-  await batch.commit()
+export async function removeSelection(
+  userId: string,
+  competitionId: string,
+  className: string,
+  runnerName: string
+): Promise<void> {
+  const id = `${userId}-${competitionId}-${className}-${runnerName.replace(/[^a-zA-Z0-9]/g, '_')}`
+  const docRef = doc(db, 'selections', id)
+  await deleteDoc(docRef)
 }
 
 export async function loadSelections(

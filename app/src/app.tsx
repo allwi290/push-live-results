@@ -14,7 +14,7 @@ import {
   checkForEmailLink,
   completeEmailLinkSignIn,
 } from './services/firebase'
-import { saveSelections, loadSelections } from './services/selections'
+import { addSelection, removeSelection, loadSelections } from './services/selections'
 import { AuthModal } from './components/AuthModal'
 import type { Club, Competition, RaceClass, ResultEntry } from './types/live-results'
 
@@ -188,12 +188,21 @@ export function App() {
 
     // Save to backend
     try {
-      await saveSelections(
-        user.uid,
-        competitionId.toString(),
-        className,
-        newFollowed
-      )
+      if (isAdding) {
+        await addSelection(
+          user.uid,
+          competitionId.toString(),
+          className,
+          runnerName
+        )
+      } else {
+        await removeSelection(
+          user.uid,
+          competitionId.toString(),
+          className,
+          runnerName
+        )
+      }
       setStatus({ kind: 'success', message: 'Saved' })
       // Clear success message after 2 seconds
       setTimeout(() => {
