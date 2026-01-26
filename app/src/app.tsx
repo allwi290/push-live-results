@@ -39,8 +39,8 @@ export function App() {
   const [clubName, setClubName] = useState('')
   const [selectionMode, setSelectionMode] = useState<'class' | 'club'>('class')
   const [followed, setFollowed] = useState<string[]>([])
-  const [sortByName, setSortByName] = useState<'asc' | 'desc'>('asc')
-  const [sortBySecondary, setSortBySecondary] = useState<'asc' | 'desc'>('asc')
+  const [sortField, setSortField] = useState<'name' | 'secondary'>('name')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
 
   // Handle email link sign-in on mount
   useEffect(() => {
@@ -326,18 +326,40 @@ export function App() {
         </div>
         <div class="mt-3 flex gap-2">
           <button
-            class={`${buttonBase} flex-1 bg-slate-100 text-slate-700 text-xs py-2`}
-            onClick={() => setSortByName(prev => prev === 'asc' ? 'desc' : 'asc')}
+            class={`${buttonBase} flex-1 text-xs py-2 ${
+              sortField === 'name'
+                ? 'bg-emerald-100 text-emerald-700'
+                : 'bg-slate-100 text-slate-700'
+            }`}
+            onClick={() => {
+              if (sortField === 'name') {
+                setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')
+              } else {
+                setSortField('name')
+                setSortDirection('asc')
+              }
+            }}
             disabled={!results.length || loadingResults}
           >
-            Name {sortByName === 'asc' ? '↑' : '↓'}
+            Name {sortField === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}
           </button>
           <button
-            class={`${buttonBase} flex-1 bg-slate-100 text-slate-700 text-xs py-2`}
-            onClick={() => setSortBySecondary(prev => prev === 'asc' ? 'desc' : 'asc')}
+            class={`${buttonBase} flex-1 text-xs py-2 ${
+              sortField === 'secondary'
+                ? 'bg-emerald-100 text-emerald-700'
+                : 'bg-slate-100 text-slate-700'
+            }`}
+            onClick={() => {
+              if (sortField === 'secondary') {
+                setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')
+              } else {
+                setSortField('secondary')
+                setSortDirection('asc')
+              }
+            }}
             disabled={!results.length || loadingResults}
           >
-            {selectionMode === 'class' ? 'Club' : 'Class'} {sortBySecondary === 'asc' ? '↑' : '↓'}
+            {selectionMode === 'class' ? 'Club' : 'Class'} {sortField === 'secondary' && (sortDirection === 'asc' ? '↑' : '↓')}
           </button>
         </div>
         <div class="mt-3 grid gap-2">
@@ -350,20 +372,23 @@ export function App() {
             </div>
           )}
           {!loadingResults && [...results].sort((a, b) => {
-            // Primary sort by name
-            const nameCompare = sortByName === 'asc' 
-              ? a.name.localeCompare(b.name)
-              : b.name.localeCompare(a.name)
-            
-            if (nameCompare !== 0) return nameCompare
-            
-            // Secondary sort by club or class
-            const fieldA = selectionMode === 'class' ? (a.club || '') : (a.className || '')
-            const fieldB = selectionMode === 'class' ? (b.club || '') : (b.className || '')
-            
-            return sortBySecondary === 'asc'
-              ? fieldA.localeCompare(fieldB)
-              : fieldB.localeCompare(fieldA)
+            if (sortField === 'name') {
+              // Sort by name
+              return sortDirection === 'asc'
+                ? a.name.localeCompare(b.name)
+                : b.name.localeCompare(a.name)
+            } else {
+              // Sort by club or class
+              const fieldA = selectionMode === 'class' ? (a.club || '') : (a.className || '')
+              const fieldB = selectionMode === 'class' ? (b.club || '') : (b.className || '')
+              
+              const compare = sortDirection === 'asc'
+                ? fieldA.localeCompare(fieldB)
+                : fieldB.localeCompare(fieldA)
+              
+              // Use name as tiebreaker
+              return compare !== 0 ? compare : a.name.localeCompare(b.name)
+            }
           }).map((result) => {
             const checked = followed.includes(result.name)
             return (
