@@ -254,7 +254,7 @@ export function App() {
               value={className}
               placeholder={classes.length === 0 && competitionId ? "No classes available" : "Choose class"}
               onChange={setClassName}
-              disabled={!competitionId || classes.length === 0}
+              disabled={!competitionId}
               options={classes.map((c) => ({
                 value: c.className,
                 label: c.className,
@@ -267,7 +267,7 @@ export function App() {
               value={clubName}
               placeholder={clubs.length === 0 && competitionId ? "No clubs available" : "Choose club"}
               onChange={setClubName}
-              disabled={!competitionId || clubs.length === 0}
+              disabled={!competitionId}
               options={clubs.map((club) => ({
                 value: club.name,
                 label: `${club.name} (${club.runners})`,
