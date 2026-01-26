@@ -406,11 +406,11 @@ export function App() {
 function getStatusText(status: number): string {
   const statusMap: Record<number, string> = {
     0: 'OK',
-    1: 'DNS',
-    2: 'DNF',
-    3: 'MP',
-    4: 'DSQ',
-    5: 'OT',
+    1: 'Did not start', //DNS
+    2: 'Did not finished', //DNF
+    3: 'Missing punch', //MP
+    4: 'Disqualified', //DSQ
+    5: 'Over max time', //OT
     9: 'Not Started',
     10: 'Not Started',
     11: 'Walk Over',
