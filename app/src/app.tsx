@@ -448,6 +448,7 @@ export function App() {
           {results.map((result) => {
             const statusText = getStatusText(result.status)
             const isOK = result.status === 0
+            const inProgress = result.progress < 100
             return (
               <article
                 key={result.name}
@@ -469,9 +470,11 @@ export function App() {
                       <span>Result: {result.result}</span>
                       <span class="text-right">{result.timeplus}</span>
                     </div>
-                    <p class="mt-1 text-[11px] text-slate-400">
-                      Progress: {result.progress}%
-                    </p>
+                    {inProgress && (
+                      <p class="mt-1 text-[11px] text-slate-400">
+                        Progress: {result.progress}%
+                      </p>
+                    )}
                   </>
                 )}
               </article>
@@ -490,7 +493,7 @@ export function App() {
 
 function getStatusText(status: number): string {
   const statusMap: Record<number, string> = {
-    0: 'OK',
+    0: '', //OK - Do not print
     1: 'Did not start', //DNS
     2: 'Did not finished', //DNF
     3: 'Missing punch', //MP
