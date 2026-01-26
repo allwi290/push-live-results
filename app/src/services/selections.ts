@@ -6,7 +6,7 @@ export async function saveSelections(
   competitionId: string,
   className: string,
   runnerNames: string[]
-) {
+): Promise<void> {
   // Get FCM token for push notifications
   let fcmToken: string | undefined
   try {

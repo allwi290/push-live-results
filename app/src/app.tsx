@@ -14,9 +14,12 @@ import {
   checkForEmailLink,
   completeEmailLinkSignIn,
 } from './services/firebase'
-import { saveSelections } from './services/selections'
+import { saveSelections as saveSelectionsUnsafe } from './services/selections'
 import { AuthModal } from './components/AuthModal'
 import type { Club, Competition, RaceClass, ResultEntry } from './types/live-results'
+
+type SaveSelectionsFn = (userId: string, competitionId: string, className: string, followed: string[]) => Promise<void>
+const saveSelections: SaveSelectionsFn = saveSelectionsUnsafe as unknown as SaveSelectionsFn
 
 type Status = { kind: 'idle' | 'info' | 'error' | 'success'; message: string }
 
