@@ -1,4 +1,4 @@
-import { doc, serverTimestamp, writeBatch } from 'firebase/firestore'
+import { doc, serverTimestamp, writeBatch, collection, query, where, getDocs } from 'firebase/firestore'
 import { db, requestNotificationPermission } from './firebase'
 
 export async function saveSelections(
@@ -32,4 +32,21 @@ export async function saveSelections(
   }
 
   await batch.commit()
+}
+
+export async function loadSelections(
+  userId: string,
+  competitionId: string,
+  className: string
+): Promise<string[]> {
+  const selectionsRef = collection(db, 'selections')
+  const q = query(
+    selectionsRef,
+    where('userId', '==', userId),
+    where('competitionId', '==', competitionId),
+    where('className', '==', className)
+  )
+  
+  const snapshot = await getDocs(q)
+  return snapshot.docs.map(doc => doc.data().runnerName as string)
 }

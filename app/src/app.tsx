@@ -14,12 +14,9 @@ import {
   checkForEmailLink,
   completeEmailLinkSignIn,
 } from './services/firebase'
-import { saveSelections as saveSelectionsUnsafe } from './services/selections'
+import { saveSelections, loadSelections } from './services/selections'
 import { AuthModal } from './components/AuthModal'
 import type { Club, Competition, RaceClass, ResultEntry } from './types/live-results'
-
-type SaveSelectionsFn = (userId: string, competitionId: string, className: string, followed: string[]) => Promise<void>
-const saveSelections: SaveSelectionsFn = saveSelectionsUnsafe as unknown as SaveSelectionsFn
 
 type Status = { kind: 'idle' | 'info' | 'error' | 'success'; message: string }
 
@@ -132,6 +129,19 @@ export function App() {
         })
     }
   }, [competitionId, className, clubName, selectionMode, classes])
+
+  // Load saved selections when user, competition, or class changes
+  useEffect(() => {
+    if (!user || !competitionId || !className || selectionMode !== 'class') {
+      return
+    }
+
+    loadSelections(user.uid, competitionId.toString(), className)
+      .then(setFollowed)
+      .catch((err) => {
+        console.error('Failed to load saved selections:', err)
+      })
+  }, [user, competitionId, className, selectionMode])
 
   const toggleRunner = (runnerName: string) => {
     setFollowed((prev) =>
