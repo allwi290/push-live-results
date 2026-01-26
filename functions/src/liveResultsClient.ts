@@ -73,7 +73,7 @@ async function fetchFromAPI<T>(
  */
 export async function fetchCompetitions(): Promise<ApiResponse<Competition[]>> {
   const response = await fetchFromAPI<Competition[]>(
-    {method: "getcompetitions"},
+    {method: "getcompetitions", lang: "en"},
     "competitions"
   );
 
@@ -115,6 +115,7 @@ export async function fetchClasses(
   const params: Record<string, string> = {
     method: "getclasses",
     comp: compId.toString(),
+    lang: "en",
   };
   if (lastHash) {
     params.last_hash = lastHash;
@@ -136,6 +137,7 @@ export async function fetchClassResults(
     comp: compId.toString(),
     class: className,
     unformattedTimes: "false",
+    lang: "en",
   };
   if (lastHash) {
     params.last_hash = lastHash;
@@ -155,6 +157,7 @@ export async function fetchLastPassings(
     method: "getlastpassings",
     comp: compId.toString(),
     unformattedTimes: "false",
+    lang: "en",
   };
   if (lastHash) {
     params.last_hash = lastHash;
