@@ -5,7 +5,10 @@ service cloud.firestore {
     // Allow authenticated users to read/write their own runner selections
     // Document IDs follow pattern: userId-competitionId-className-runnerName
     match /selections/{selectionId} {
-      allow read, write: if request.auth != null 
+      allow read: if request.auth != null 
+        && (selectionId.matches('^' + request.auth.uid + '-.*') 
+            || resource.data.userId == request.auth.uid);
+      allow write: if request.auth != null 
         && selectionId.matches('^' + request.auth.uid + '-.*');
     }
     
