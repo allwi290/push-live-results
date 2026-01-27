@@ -71,6 +71,7 @@ node_modules/
 !.env.example
 !.env*.example
 !.env.*.example
+!.env.production
 
 # dataconnect generated files
 .dataconnect
