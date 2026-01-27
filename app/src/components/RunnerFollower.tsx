@@ -106,7 +106,10 @@ export function RunnerFollower({
             })
             .map((result) => {
               const checked = followed.includes(result.name)
-              const isSelectable = result.status === 0 && result.progress < 100
+              const isSelectable =
+                (result.status === 0 && result.progress < 100) ||
+                result.status === 9 ||
+                result.status === 10
               const statusText = getStatusText(result.status)
               return (
                 <button

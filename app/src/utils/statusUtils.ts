@@ -6,8 +6,8 @@ export function getStatusText(status: number): string {
     3: 'Missing punch',
     4: 'Disqualified',
     5: 'Over max time',
-    9: 'Not Started',
-    10: 'Not Started',
+    9: 'Not Started Yet',
+    10: 'Not Started Yet',
     11: 'Walk Over',
     12: 'Moved Up',
   }

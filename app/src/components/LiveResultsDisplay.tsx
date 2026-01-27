@@ -14,6 +14,7 @@ export function LiveResultsDisplay({ results }: LiveResultsDisplayProps) {
       </div>
       <div class="mt-3 space-y-2">
         {results
+          .filter((a) => a.status !== 9 && a.status !== 10)
           .sort((a, b) => a.status - b.status)
           .map((result) => {
             const statusText = getStatusText(result.status)
