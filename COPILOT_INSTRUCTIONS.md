@@ -39,6 +39,8 @@ Goal: Build a minimal, mobile-only web client for live orienteering push notific
 
 - LiveResults API: <https://liveresults.github.io/documentation/api.html>
 - Use hash parameter to minimize data transfer on polling.
+- **`timediff` property**: In responses from `getCompetitions` and `getCompetitionInfo`, the `timediff` property represents the number of hours that the competition's timezone is ahead (+) or behind (-) compared to Central European Time (CET).
+- **`start` property**: In responses from `getClassResults` and `getClubResults`, the `start` property represents the start time for the runner in milliseconds since midnight.
 
 ## Dev Notes
 

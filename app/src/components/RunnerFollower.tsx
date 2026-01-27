@@ -20,6 +20,13 @@ type RunnerFollowerProps = {
   onSortDirectionToggle: () => void
 }
 
+const formatStartTime = (startMs: number): string => {
+  const hours = Math.floor(startMs / 3600000)
+  const minutes = Math.floor((startMs % 3600000) / 60000)
+  const seconds = Math.floor((startMs % 60000) / 1000)
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+}
+
 export function RunnerFollower({
   results,
   loadingResults,
@@ -134,6 +141,9 @@ export function RunnerFollower({
                       <p class="text-xs text-slate-400">
                         {result.progress >= 100 ? 'Finished' : statusText}
                       </p>
+                    )}
+                    {isSelectable && (result.status === 9 || result.status === 10) && result.start !== undefined && (
+                      <p class="text-xs text-blue-600 font-medium">Starts: {formatStartTime(result.start)}</p>
                     )}
                   </div>
                   <input
