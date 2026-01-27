@@ -397,14 +397,19 @@ export function App() {
               })
               .map((result) => {
                 const checked = followed.includes(result.name)
+                const isSelectable = result.status === 0 && result.progress < 100
+                const statusText = getStatusText(result.status)
                 return (
                   <button
                     key={result.name}
-                    onClick={() => toggleRunner(result.name)}
+                    onClick={() => isSelectable && toggleRunner(result.name)}
+                    disabled={!isSelectable}
                     class={`flex items-center justify-between rounded-xl border px-3 py-3 text-left text-sm transition ${
-                      checked
-                        ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
-                        : 'border-slate-200 bg-white text-slate-900'
+                      !isSelectable
+                        ? 'cursor-not-allowed border-slate-100 bg-slate-50 opacity-50'
+                        : checked
+                          ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                          : 'border-slate-200 bg-white text-slate-900'
                     }`}
                   >
                     <div>
@@ -413,12 +418,18 @@ export function App() {
                       {result.className && (
                         <p class="text-xs text-slate-400">{result.className}</p>
                       )}
+                      {!isSelectable && (
+                        <p class="text-xs text-slate-400">
+                          {result.progress >= 100 ? 'Finished' : statusText}
+                        </p>
+                      )}
                     </div>
                     <input
                       type="checkbox"
                       checked={checked}
+                      disabled={!isSelectable}
                       aria-label={`Follow ${result.name}`}
-                      class="h-4 w-4 rounded border-slate-300 text-emerald-600"
+                      class="h-4 w-4 rounded border-slate-300 text-emerald-600 disabled:opacity-50"
                       readOnly
                     />
                   </button>
