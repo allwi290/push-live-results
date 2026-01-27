@@ -33,14 +33,20 @@ const messagingPromise = isSupported().then((supported) =>
   supported ? getMessaging(app) : null,
 )
 
-// Register service worker for push notifications
+// Register service worker for push notifications and store the registration promise
+let serviceWorkerRegistration: Promise<ServiceWorkerRegistration | null> = Promise.resolve(null)
+
 if ('serviceWorker' in navigator) {
-  void isSupported().then((supported) => {
+  serviceWorkerRegistration = isSupported().then(async (supported) => {
     if (supported) {
-      void navigator.serviceWorker.register('/firebase-messaging-sw.js').catch((err) => {
+      try {
+        return await navigator.serviceWorker.register('/firebase-messaging-sw.js')
+      } catch (err) {
         console.warn('Service Worker registration failed:', err)
-      })
+        return null
+      }
     }
+    return null
   })
 }
 
@@ -97,6 +103,9 @@ export async function requestNotificationPermission() {
   if (!currentUser) {
     throw new Error('User must be authenticated to request notifications')
   }
+
+  // Wait for service worker to be ready
+  await serviceWorkerRegistration
 
   const permission = await Notification.requestPermission()
   if (permission !== 'granted') {
