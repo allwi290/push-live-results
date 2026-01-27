@@ -33,6 +33,17 @@ const messagingPromise = isSupported().then((supported) =>
   supported ? getMessaging(app) : null,
 )
 
+// Register service worker for push notifications
+if ('serviceWorker' in navigator) {
+  void isSupported().then((supported) => {
+    if (supported) {
+      void navigator.serviceWorker.register('/firebase-messaging-sw.js').catch((err) => {
+        console.warn('Service Worker registration failed:', err)
+      })
+    }
+  })
+}
+
 export function listenToAuthChanges(callback: (user: User | null) => void) {
   return onAuthStateChanged(auth, callback)
 }
@@ -80,6 +91,12 @@ export async function signOutUser() {
 export async function requestNotificationPermission() {
   const messaging = await messagingPromise
   if (!messaging) return null
+
+  // Ensure user is authenticated
+  const currentUser = auth.currentUser
+  if (!currentUser) {
+    throw new Error('User must be authenticated to request notifications')
+  }
 
   const permission = await Notification.requestPermission()
   if (permission !== 'granted') {
