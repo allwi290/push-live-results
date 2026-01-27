@@ -3,6 +3,7 @@
  */
 
 import {initializeApp} from "firebase-admin/app";
+import {getFirestore} from "firebase-admin/firestore";
 import {setGlobalOptions} from "firebase-functions";
 import {onRequest} from "firebase-functions/https";
 import {onSchedule} from "firebase-functions/v2/scheduler";
@@ -373,3 +374,103 @@ export const cleanSelections = onSchedule("0 3 * * *", async () => {
   await cleanOldSelections();
   logger.info("Selections cleanup completed");
 });
+
+/**
+ * Scheduled function to poll active selections and send notifications
+ * Runs every minute to check for updates in followed competitions
+ */
+export const pollActiveSelections = onSchedule(
+  {schedule: "* * * * *", maxInstances: 1},
+  async () => {
+    logger.info("Starting active selections polling");
+
+    try {
+      const db = getFirestore();
+      const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000;
+
+      // Get all active selections (created within last 24 hours)
+      const snapshot = await db
+        .collection("selections")
+        .where("createdAt", ">", twentyFourHoursAgo)
+        .get();
+
+      if (snapshot.empty) {
+        logger.info("No active selections to poll");
+        return;
+      }
+
+      // Group selections by competition/class to deduplicate API calls
+      const uniqueTargets = new Map<string, {compId: string; className: string}>();
+
+      snapshot.docs.forEach((doc) => {
+        const selection = doc.data();
+        const key = `${selection.competitionId}_${selection.className}`;
+        if (!uniqueTargets.has(key)) {
+          uniqueTargets.set(key, {
+            compId: selection.competitionId,
+            className: selection.className,
+          });
+        }
+      });
+
+      logger.info(`Polling ${uniqueTargets.size} unique competition/class combinations for ${snapshot.size} active selections`);
+
+      // Poll each unique competition/class
+      for (const [key, target] of uniqueTargets) {
+        try {
+          const cacheKey = getCacheKey({
+            method: "getclassresult",
+            comp: target.compId,
+            class: target.className,
+          });
+
+          // Get cached data to compare
+          const cached = await getCachedData(cacheKey, CACHE_TTL.CLASS_RESULTS);
+          const oldResults = cached?.data as ResultEntry[] || [];
+
+          // Fetch fresh data from LiveResults API
+          const resultsResult = await fetchClassResults(
+            parseInt(target.compId),
+            target.className
+          );
+
+          if (resultsResult.status === "NOT MODIFIED") {
+            logger.info(`No changes for ${key}`);
+            continue;
+          }
+
+          if (resultsResult.status !== "OK" || !resultsResult.data) {
+            logger.warn(`Failed to fetch results for ${key}`);
+            continue;
+          }
+
+          const newResults = resultsResult.data;
+
+          // Check if results actually changed (comparing with cached data)
+          if (oldResults.length > 0) {
+            logger.info(`Detected changes for ${key} - triggering notifications`);
+            await notifyResultChanges(
+              target.compId,
+              target.className,
+              oldResults,
+              newResults
+            );
+          } else {
+            logger.info(`First poll for ${key} - establishing baseline`);
+          }
+
+          // Update cache with new data
+          if (resultsResult.hash) {
+            await setCachedData(cacheKey, resultsResult.hash, newResults);
+          }
+        } catch (error) {
+          logger.error(`Error polling ${key}:`, error);
+        }
+      }
+
+      logger.info("Active selections polling completed");
+    } catch (error) {
+      logger.error("Error in pollActiveSelections:", error);
+    }
+  }
+);

@@ -12,8 +12,14 @@ All backend Cloud Functions and frontend integration have been successfully impl
 - **`api` (HTTP)** - Main API proxy endpoint
   - Handles all LiveResults API methods
   - Implements hash-based caching
-  - Triggers push notifications on result changes
+  - Triggers push notifications on result changes (on-demand)
   - CORS enabled for frontend access
+
+- **`pollActiveSelections` (Scheduled)** - Every minute
+  - Polls LiveResults API for active user selections
+  - Sends push notifications even when no clients connected
+  - Groups selections by competition/class to minimize API calls
+  - Only processes selections created within last 24 hours
 
 - **`cleanCache` (Scheduled)** - Daily at 2 AM UTC
   - Removes cache entries older than 7 days
