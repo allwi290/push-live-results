@@ -83,12 +83,13 @@ export async function fetchCompetitions(): Promise<ApiResponse<Competition[]>> {
     // - Exclude future events
     // - Sort with latest first (descending)
     const now = new Date();
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const toDate = new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000);
+    const fromDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
     
     const filtered = response.data
       .filter((comp: Competition) => {
         const compDate = new Date(comp.date);
-        return compDate <= now && compDate >= sevenDaysAgo;
+        return compDate <= toDate && compDate >= fromDate;
       })
       .sort((a: Competition, b: Competition) => {
         return new Date(b.date).getTime() - new Date(a.date).getTime();
