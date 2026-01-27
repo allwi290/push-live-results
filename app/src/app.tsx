@@ -16,6 +16,9 @@ import {
 } from './services/firebase'
 import { addSelection, removeSelection, loadSelections } from './services/selections'
 import { AuthModal } from './components/AuthModal'
+import { CompetitionSelector } from './components/CompetitionSelector'
+import { RunnerFollower } from './components/RunnerFollower'
+import { LiveResultsDisplay } from './components/LiveResultsDisplay'
 import type { Club, Competition, RaceClass, ResultEntry } from './types/live-results'
 
 type Status = { kind: 'idle' | 'info' | 'error' | 'success'; message: string }
@@ -34,13 +37,29 @@ export function App() {
   const [results, setResults] = useState<ResultEntry[]>([])
   const [loadingResults, setLoadingResults] = useState(false)
 
-  const [competitionId, setCompetitionId] = useState<number | null>(null)
-  const [className, setClassName] = useState('')
-  const [clubName, setClubName] = useState('')
-  const [selectionMode, setSelectionMode] = useState<'class' | 'club'>('class')
+  const [competitionId, setCompetitionId] = useState<number | null>(() => {
+    const saved = localStorage.getItem('competitionId')
+    return saved ? parseInt(saved) : null
+  })
+  const [className, setClassName] = useState(() => 
+    localStorage.getItem('className') || ''
+  )
+  const [clubName, setClubName] = useState(() => 
+    localStorage.getItem('clubName') || ''
+  )
+  const [selectionMode, setSelectionMode] = useState<'class' | 'club'>(() => {
+    const saved = localStorage.getItem('selectionMode')
+    return saved === 'club' ? 'club' : 'class'
+  })
   const [followed, setFollowed] = useState<string[]>([])
-  const [sortField, setSortField] = useState<'name' | 'secondary'>('name')
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [sortField, setSortField] = useState<'name' | 'secondary'>(() => {
+    const saved = localStorage.getItem('sortField')
+    return saved === 'secondary' ? 'secondary' : 'name'
+  })
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(() => {
+    const saved = localStorage.getItem('sortDirection')
+    return saved === 'desc' ? 'desc' : 'asc'
+  })
 
   // Handle email link sign-in on mount
   useEffect(() => {
@@ -72,6 +91,43 @@ export function App() {
   useEffect(() => {
     fetchCompetitions().then(setCompetitions).catch(console.error)
   }, [])
+
+  // Save preferences to localStorage
+  useEffect(() => {
+    if (competitionId) {
+      localStorage.setItem('competitionId', competitionId.toString())
+    } else {
+      localStorage.removeItem('competitionId')
+    }
+  }, [competitionId])
+
+  useEffect(() => {
+    if (className) {
+      localStorage.setItem('className', className)
+    } else {
+      localStorage.removeItem('className')
+    }
+  }, [className])
+
+  useEffect(() => {
+    if (clubName) {
+      localStorage.setItem('clubName', clubName)
+    } else {
+      localStorage.removeItem('clubName')
+    }
+  }, [clubName])
+
+  useEffect(() => {
+    localStorage.setItem('selectionMode', selectionMode)
+  }, [selectionMode])
+
+  useEffect(() => {
+    localStorage.setItem('sortField', sortField)
+  }, [sortField])
+
+  useEffect(() => {
+    localStorage.setItem('sortDirection', sortDirection)
+  }, [sortDirection])
 
   // Pull classes and clubs when competition changes
   useEffect(() => {
@@ -242,392 +298,37 @@ export function App() {
         </div>
       </header>
 
-      <section class="mb-4 rounded-2xl bg-white p-4 shadow-sm">
-        <div class="flex items-center justify-between">
-          <h2 class="text-lg font-semibold">Select event</h2>
-          <span class="text-xs text-slate-500">Competition → Class or Club</span>
-        </div>
-        <div class="mt-3 grid gap-3">
-          <Select
-            label="Competition"
-            value={competitionId?.toString() || ''}
-            placeholder="Choose competition"
-            onChange={(val) => setCompetitionId(val ? Number(val) : null)}
-            options={groupCompetitionsByDate(competitions).map((group) => ({
-              label: group.label,
-              options: group.competitions.map((c) => ({
-                value: c.id.toString(),
-                label: `${c.name} (${c.organizer})`,
-              })),
-            }))}
-          />
-          <div class="flex gap-2 text-sm">
-            <button
-              class={`${buttonBase} flex-1 ${selectionMode === 'class' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700'}`}
-              onClick={() => {
-                setSelectionMode('class')
-                setClubName('')
-              }}
-            >
-              Select by Class
-            </button>
-            <button
-              class={`${buttonBase} flex-1 ${selectionMode === 'club' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700'}`}
-              onClick={() => {
-                setSelectionMode('club')
-                setClassName('')
-              }}
-            >
-              Select by Club
-            </button>
-          </div>
-          {selectionMode === 'class' && (
-            <Select
-              label="Class"
-              value={className}
-              placeholder={
-                classes.length === 0 && competitionId
-                  ? 'No classes available'
-                  : 'Choose class'
-              }
-              onChange={setClassName}
-              disabled={!competitionId}
-              options={classes.map((c) => ({
-                value: c.className,
-                label: c.className,
-              }))}
-            />
-          )}
-          {selectionMode === 'club' && (
-            <Select
-              label="Club"
-              value={clubName}
-              placeholder={
-                clubs.length === 0 && competitionId ? 'No clubs available' : 'Choose club'
-              }
-              onChange={setClubName}
-              disabled={!competitionId}
-              options={clubs.map((club) => ({
-                value: club.name,
-                label: `${club.name} (${club.runners})`,
-              }))}
-            />
-          )}
-        </div>
-      </section>
+      <CompetitionSelector
+        competitions={competitions}
+        classes={classes}
+        clubs={clubs}
+        competitionId={competitionId}
+        className={className}
+        clubName={clubName}
+        selectionMode={selectionMode}
+        onCompetitionChange={setCompetitionId}
+        onClassNameChange={setClassName}
+        onClubNameChange={setClubName}
+        onSelectionModeChange={setSelectionMode}
+      />
 
-      <section class="mb-4 rounded-2xl bg-white p-4 shadow-sm">
-        <div class="flex items-center justify-between">
-          <h2 class="text-lg font-semibold">Follow runners</h2>
-          <span class="text-xs text-slate-500">
-            {followed.length} {followed.length === 1 ? 'runner' : 'runners'} followed
-          </span>
-        </div>
-        <div class="mt-3 flex gap-2">
-          <button
-            class={`${buttonBase} flex-1 text-xs py-2 ${
-              sortField === 'name'
-                ? 'bg-emerald-100 text-emerald-700'
-                : 'bg-slate-100 text-slate-700'
-            }`}
-            onClick={() => {
-              if (sortField === 'name') {
-                setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
-              } else {
-                setSortField('name')
-                setSortDirection('asc')
-              }
-            }}
-            disabled={!results.length || loadingResults}
-          >
-            Name {sortField === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}
-          </button>
-          <button
-            class={`${buttonBase} flex-1 text-xs py-2 ${
-              sortField === 'secondary'
-                ? 'bg-emerald-100 text-emerald-700'
-                : 'bg-slate-100 text-slate-700'
-            }`}
-            onClick={() => {
-              if (sortField === 'secondary') {
-                setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
-              } else {
-                setSortField('secondary')
-                setSortDirection('asc')
-              }
-            }}
-            disabled={!results.length || loadingResults}
-          >
-            {selectionMode === 'class' ? 'Club' : 'Class'}{' '}
-            {sortField === 'secondary' && (sortDirection === 'asc' ? '↑' : '↓')}
-          </button>
-        </div>
-        <div class="mt-3 grid gap-2">
-          {loadingResults && (
-            <div class="flex items-center justify-center py-6">
-              <div class="flex flex-col items-center gap-2">
-                <div class="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-emerald-600"></div>
-                <p class="text-sm text-slate-500">Loading runners…</p>
-              </div>
-            </div>
-          )}
-          {!loadingResults &&
-            [...results]
-              .sort((a, b) => {
-                if (sortField === 'name') {
-                  // Sort by name
-                  return sortDirection === 'asc'
-                    ? a.name.localeCompare(b.name)
-                    : b.name.localeCompare(a.name)
-                } else {
-                  // Sort by club or class
-                  const fieldA =
-                    selectionMode === 'class' ? a.club || '' : a.className || ''
-                  const fieldB =
-                    selectionMode === 'class' ? b.club || '' : b.className || ''
+      <RunnerFollower
+        results={results}
+        loadingResults={loadingResults}
+        followed={followed}
+        sortField={sortField}
+        sortDirection={sortDirection}
+        selectionMode={selectionMode}
+        user={user}
+        status={status}
+        onToggleRunner={toggleRunner}
+        onSortFieldChange={setSortField}
+        onSortDirectionToggle={() => setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+      />
 
-                  const compare =
-                    sortDirection === 'asc'
-                      ? fieldA.localeCompare(fieldB)
-                      : fieldB.localeCompare(fieldA)
-
-                  // Use name as tiebreaker
-                  return compare !== 0 ? compare : a.name.localeCompare(b.name)
-                }
-              })
-              .map((result) => {
-                const checked = followed.includes(result.name)
-                const isSelectable = result.status === 0 && result.progress < 100
-                const statusText = getStatusText(result.status)
-                return (
-                  <button
-                    key={result.name}
-                    onClick={() => isSelectable && toggleRunner(result.name)}
-                    disabled={!isSelectable}
-                    class={`flex items-center justify-between rounded-xl border px-3 py-3 text-left text-sm transition ${
-                      !isSelectable
-                        ? 'cursor-not-allowed border-slate-100 bg-slate-50 opacity-50'
-                        : checked
-                          ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
-                          : 'border-slate-200 bg-white text-slate-900'
-                    }`}
-                  >
-                    <div>
-                      <p class="font-semibold">{result.name}</p>
-                      {result.club && <p class="text-xs text-slate-500">{result.club}</p>}
-                      {result.className && (
-                        <p class="text-xs text-slate-400">{result.className}</p>
-                      )}
-                      {!isSelectable && (
-                        <p class="text-xs text-slate-400">
-                          {result.progress >= 100 ? 'Finished' : statusText}
-                        </p>
-                      )}
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      disabled={!isSelectable}
-                      aria-label={`Follow ${result.name}`}
-                      class="h-4 w-4 rounded border-slate-300 text-emerald-600 disabled:opacity-50"
-                      readOnly
-                    />
-                  </button>
-                )
-              })}
-          {!loadingResults && !results.length && (
-            <p class="text-sm text-slate-500">
-              {user
-                ? 'Select a class or club to see runners.'
-                : 'Sign in and select a class to follow runners.'}
-            </p>
-          )}
-        </div>
-        {status.message && (
-          <p
-            class={`mt-2 text-sm ${
-              status.kind === 'error'
-                ? 'text-red-600'
-                : status.kind === 'success'
-                  ? 'text-emerald-700'
-                  : 'text-slate-600'
-            }`}
-          >
-            {status.message}
-          </p>
-        )}
-      </section>
-
-      <section class="rounded-2xl bg-white p-4 shadow-sm">
-        <div class="flex items-center justify-between">
-          <h2 class="text-lg font-semibold">Live results</h2>
-          <span class="text-xs text-slate-500">Updated as data arrives</span>
-        </div>
-        <div class="mt-3 space-y-2">
-          {results
-            .sort((a, b) => {
-              return a.status - b.status
-            })
-            .map((result) => {
-              const statusText = getStatusText(result.status)
-              const isOK = result.status === 0
-              const inProgress = result.progress < 100
-              return (
-                <article
-                  key={result.name}
-                  class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3"
-                >
-                  <div class="flex items-center justify-between text-sm">
-                    <div>
-                      <p class="font-semibold">{result.name}</p>
-                      <p class="text-xs text-slate-500">{result.club || '—'}</p>
-                      <p class="text-xs text-slate-400">{result.className}</p>
-                    </div>
-                    <div class="text-right text-xs text-slate-600">
-                      {isOK ? <p>Pos {result.place}</p> : <p>{statusText}</p>}
-                    </div>
-                  </div>
-                  {isOK && (
-                    <>
-                      <div class="mt-2 grid grid-cols-2 text-xs text-slate-600">
-                        <span>Result: {result.result}</span>
-                        <span class="text-right">{result.timeplus}</span>
-                      </div>
-                      {inProgress && (
-                        <p class="mt-1 text-[11px] text-slate-400">
-                          Progress: {result.progress}%
-                        </p>
-                      )}
-                    </>
-                  )}
-                </article>
-              )
-            })}
-          {!results.length && (
-            <p class="text-sm text-slate-500">Select a class to see live results.</p>
-          )}
-        </div>
-      </section>
+      <LiveResultsDisplay results={results} />
 
       {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
     </div>
-  )
-}
-
-function getStatusText(status: number): string {
-  const statusMap: Record<number, string> = {
-    0: 'OK',
-    1: 'Did not start', //DNS
-    2: 'Did not finished', //DNF
-    3: 'Missing punch', //MP
-    4: 'Disqualified', //DSQ
-    5: 'Over max time', //OT
-    9: 'Not Started',
-    10: 'Not Started',
-    11: 'Walk Over',
-    12: 'Moved Up',
-  }
-  return statusMap[status] || 'Unknown'  
-}
-
-function formatDateLabel(dateStr: string): string {
-  const date = new Date(dateStr)
-  const today = new Date()
-  const yesterday = new Date(today)
-  yesterday.setDate(yesterday.getDate() - 1)
-
-  const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-  const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate())
-  const yesterdayOnly = new Date(
-    yesterday.getFullYear(),
-    yesterday.getMonth(),
-    yesterday.getDate(),
-  )
-
-  if (dateOnly.getTime() === todayOnly.getTime()) {
-    return 'Today'
-  } else if (dateOnly.getTime() === yesterdayOnly.getTime()) {
-    return 'Yesterday'
-  } else {
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-    })
-  }
-}
-
-function groupCompetitionsByDate(
-  competitions: Competition[],
-): { label: string; competitions: Competition[] }[] {
-  const groups: Record<string, Competition[]> = {}
-
-  competitions.forEach((comp) => {
-    const label = formatDateLabel(comp.date)
-    if (!groups[label]) {
-      groups[label] = []
-    }
-    groups[label].push(comp)
-  })
-
-  // Order: Today, Yesterday, then others by date descending
-  const order = ['Today', 'Yesterday']
-  const otherDates = Object.keys(groups)
-    .filter((key) => !order.includes(key))
-    .sort()
-  const sortedKeys = [...order.filter((key) => groups[key]), ...otherDates]
-
-  return sortedKeys.map((label) => ({
-    label,
-    competitions: groups[label],
-  }))
-}
-
-type SelectOption = { value: string; label: string }
-type SelectGroup = { label: string; options: SelectOption[] }
-
-type SelectProps = {
-  label: string
-  value: string
-  placeholder: string
-  options: SelectOption[] | SelectGroup[]
-  onChange: (value: string) => void
-  disabled?: boolean
-}
-
-function isGrouped(options: SelectOption[] | SelectGroup[]): options is SelectGroup[] {
-  return options.length > 0 && 'options' in options[0]
-}
-
-function Select({ label, value, placeholder, options, onChange, disabled }: SelectProps) {
-  return (
-    <label class="block text-sm">
-      <span class="mb-1 block font-medium text-slate-700">{label}</span>
-      <select
-        value={value}
-        disabled={disabled}
-        class="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-base shadow-inner focus:border-emerald-500 focus:outline-none"
-        onChange={(event) => onChange((event.target as HTMLSelectElement).value)}
-      >
-        <option value="" disabled>
-          {placeholder}
-        </option>
-        {isGrouped(options)
-          ? options.map((group) => (
-              <optgroup key={group.label} label={group.label}>
-                {group.options.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </optgroup>
-            ))
-          : options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-      </select>
-    </label>
   )
 }
