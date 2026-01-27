@@ -143,7 +143,7 @@ export function RunnerFollower({
                       </p>
                     )}
                     {isSelectable && (result.status === 9 || result.status === 10) && result.start !== undefined && (
-                      <p class="text-xs text-blue-600 font-medium">Starts: {formatStartTime(result.start)}</p>
+                      <p class="text-xs text-emerald-600 font-medium">Starts: {formatStartTime(result.start)}</p>
                     )}
                   </div>
                   <input
