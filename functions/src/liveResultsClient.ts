@@ -3,7 +3,13 @@
  */
 
 import * as logger from "firebase-functions/logger";
-import {ApiResponse, Competition, RaceClass, ResultEntry, LastPassing} from "./types";
+import {
+  ApiResponse,
+  Competition,
+  RaceClass,
+  ResultEntry,
+  LastPassing,
+} from "./types";
 import JSON5 from "json5";
 
 const LIVE_RESULTS_API = "https://liveresultat.orientering.se/api.php";
@@ -15,7 +21,7 @@ function sanitizeControlCharacters(uint8Array: Uint8Array): void {
   for (let i = 0; i < uint8Array.length; i++) {
     const byte = uint8Array[i];
     // Check for control characters: 0x00-0x1F (except HT=0x09, LF=0x0A, CR=0x0D)
-    if (byte < 0x20 && byte !== 0x09 && byte !== 0x0A && byte !== 0x0D) {
+    if (byte < 0x20 && byte !== 0x09 && byte !== 0x0a && byte !== 0x0d) {
       uint8Array[i] = 0x20;
     }
   }
@@ -26,7 +32,7 @@ function sanitizeControlCharacters(uint8Array: Uint8Array): void {
  */
 async function fetchFromAPI<T>(
   params: Record<string, string>,
-  dataKey: string
+  dataKey: string,
 ): Promise<ApiResponse<T>> {
   const url = new URL(LIVE_RESULTS_API);
   Object.entries(params).forEach(([key, value]) => {
@@ -41,10 +47,10 @@ async function fetchFromAPI<T>(
 
     const arrayBuffer = await response.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
-    
+
     sanitizeControlCharacters(uint8Array);
-    
-    const text = new TextDecoder("utf-8", {fatal: false}).decode(uint8Array);
+
+    const text = new TextDecoder("utf-8", { fatal: false }).decode(uint8Array);
     const data = JSON5.parse(text);
 
     if (data.status === "NOT MODIFIED") {
@@ -73,8 +79,8 @@ async function fetchFromAPI<T>(
  */
 export async function fetchCompetitions(): Promise<ApiResponse<Competition[]>> {
   const response = await fetchFromAPI<Competition[]>(
-    {method: "getcompetitions", lang: "en"},
-    "competitions"
+    { method: "getcompetitions", lang: "en" },
+    "competitions",
   );
 
   if (response.status === "OK" && response.data) {
@@ -85,7 +91,7 @@ export async function fetchCompetitions(): Promise<ApiResponse<Competition[]>> {
     const now = new Date();
     const toDate = new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000);
     const fromDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
-    
+
     const filtered = response.data
       .filter((comp: Competition) => {
         const compDate = new Date(comp.date);
@@ -94,9 +100,11 @@ export async function fetchCompetitions(): Promise<ApiResponse<Competition[]>> {
       .sort((a: Competition, b: Competition) => {
         return new Date(b.date).getTime() - new Date(a.date).getTime();
       });
-    
-    logger.info(`Filtered competitions: ${filtered.length} out of ${response.data.length}`);
-    
+
+    logger.info(
+      `Filtered competitions: ${filtered.length} out of ${response.data.length}`,
+    );
+
     return {
       status: "OK",
       data: filtered,
@@ -111,7 +119,7 @@ export async function fetchCompetitions(): Promise<ApiResponse<Competition[]>> {
  */
 export async function fetchClasses(
   compId: number,
-  lastHash?: string
+  lastHash?: string,
 ): Promise<ApiResponse<RaceClass[]>> {
   const params: Record<string, string> = {
     method: "getclasses",
@@ -131,7 +139,7 @@ export async function fetchClasses(
 export async function fetchClassResults(
   compId: number,
   className: string,
-  lastHash?: string
+  lastHash?: string,
 ): Promise<ApiResponse<ResultEntry[]>> {
   const params: Record<string, string> = {
     method: "getclassresults",
@@ -152,7 +160,7 @@ export async function fetchClassResults(
  */
 export async function fetchLastPassings(
   compId: number,
-  lastHash?: string
+  lastHash?: string,
 ): Promise<ApiResponse<LastPassing[]>> {
   const params: Record<string, string> = {
     method: "getlastpassings",
