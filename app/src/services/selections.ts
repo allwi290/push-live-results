@@ -21,15 +21,15 @@ function calculateStartTime(
   // Parse competition date (format: YYYY-MM-DD)
   const [year, month, day] = competitionDate.split('-').map(Number)
   
-  // Create date at midnight CET
+  // Create date at midnight UTC
   const date = new Date(Date.UTC(year, month - 1, day))
   
   // Add the runner's start time (hundreds of seconds since midnight CET)
   const startMilliseconds = runnerStart * 10
   date.setTime(date.getTime() + startMilliseconds)
   
-  // Apply timezone offset (timediff is offset from CET in hours)
-  const timezoneOffsetMs = timediff * 3600000
+  // Apply timezone offset (timediff is offset from CET in hours) 
+  const timezoneOffsetMs = (timediff - 1) * 3600000
   date.setTime(date.getTime() + timezoneOffsetMs)
   
   return date.getTime()
