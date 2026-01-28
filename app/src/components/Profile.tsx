@@ -2,6 +2,7 @@ import { useEffect, useState } from 'preact/hooks'
 import type { User } from 'firebase/auth'
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore'
 import { db, getCurrentFCMToken } from '../services/firebase'
+import { removeSelection } from '../services/selections'
 
 const buttonBase =
   'rounded-lg px-4 py-3 text-sm font-semibold shadow-sm transition active:scale-[0.99]'
@@ -32,6 +33,7 @@ export function Profile({ user, onClose, onSignOut }: ProfileProps) {
     otherDevices: [],
   })
   const [loading, setLoading] = useState(true)
+  const [removingRunner, setRemovingRunner] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -74,6 +76,30 @@ export function Profile({ user, onClose, onSignOut }: ProfileProps) {
     }
     void load()
   }, [user.uid])
+
+  const handleUnfollow = async (competitionId: string, className: string, runnerName: string) => {
+    const key = `${competitionId}-${className}-${runnerName}`
+    setRemovingRunner(key)
+    
+    try {
+      await removeSelection(user.uid, competitionId, className, runnerName)
+      
+      // Update local state
+      setSelections((prev) => ({
+        thisDevice: prev.thisDevice.filter(
+          (s) => !(s.competitionId === competitionId && s.className === className && s.runnerName === runnerName)
+        ),
+        otherDevices: prev.otherDevices.filter(
+          (s) => !(s.competitionId === competitionId && s.className === className && s.runnerName === runnerName)
+        ),
+      }))
+    } catch (error) {
+      console.error('Failed to unfollow runner:', error)
+      alert('Failed to unfollow runner. Please try again.')
+    } finally {
+      setRemovingRunner(null)
+    }
+  }
 
   const groupByCompetitionClass = (selections: Selection[]) => {
     const groups = new Map<string, Selection[]>()
@@ -167,20 +193,45 @@ export function Profile({ user, onClose, onSignOut }: ProfileProps) {
                             {group.runners.length} runner{group.runners.length !== 1 ? 's' : ''}
                           </span>
                         </div>
-                        <ul class="mt-2 space-y-1">
-                          {group.runners.map((runner) => (
-                            <li
-                              key={runner.runnerName}
-                              class="flex items-center justify-between text-sm"
-                            >
-                              <span class="text-slate-700">{runner.runnerName}</span>
-                              {runner.startTime && (
-                                <span class="text-xs text-slate-500">
-                                  {new Date(runner.startTime).toLocaleString()}
-                                </span>
-                              )}
-                            </li>
-                          ))}
+                        <ul class="mt-2 space-y-2">
+                          {group.runners.map((runner) => {
+                            const key = `${runner.competitionId}-${runner.className}-${runner.runnerName}`
+                            const isRemoving = removingRunner === key
+                            return (
+                              <li
+                                key={runner.runnerName}
+                                class="flex items-center justify-between gap-2 rounded p-2 hover:bg-emerald-100"
+                              >
+                                <div class="flex-1">
+                                  <span class="text-sm font-medium text-slate-700">{runner.runnerName}</span>
+                                  {runner.startTime && (
+                                    <span class="ml-2 text-xs text-slate-500">
+                                      {new Date(runner.startTime).toLocaleString()}
+                                    </span>
+                                  )}
+                                </div>
+                                <button
+                                  onClick={() => handleUnfollow(runner.competitionId, runner.className, runner.runnerName)}
+                                  disabled={isRemoving}
+                                  class="rounded p-1 text-red-600 hover:bg-red-100 disabled:opacity-50"
+                                  title="Unfollow runner"
+                                >
+                                  {isRemoving ? (
+                                    <div class="h-4 w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent"></div>
+                                  ) : (
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                      />
+                                    </svg>
+                                  )}
+                                </button>
+                              </li>
+                            )
+                          })}
                         </ul>
                       </div>
                     ))}
@@ -211,20 +262,45 @@ export function Profile({ user, onClose, onSignOut }: ProfileProps) {
                             {group.runners.length} runner{group.runners.length !== 1 ? 's' : ''}
                           </span>
                         </div>
-                        <ul class="mt-2 space-y-1">
-                          {group.runners.map((runner) => (
-                            <li
-                              key={runner.runnerName}
-                              class="flex items-center justify-between text-sm"
-                            >
-                              <span class="text-slate-700">{runner.runnerName}</span>
-                              {runner.startTime && (
-                                <span class="text-xs text-slate-500">
-                                  {new Date(runner.startTime).toLocaleString()}
-                                </span>
-                              )}
-                            </li>
-                          ))}
+                        <ul class="mt-2 space-y-2">
+                          {group.runners.map((runner) => {
+                            const key = `${runner.competitionId}-${runner.className}-${runner.runnerName}`
+                            const isRemoving = removingRunner === key
+                            return (
+                              <li
+                                key={runner.runnerName}
+                                class="flex items-center justify-between gap-2 rounded p-2 hover:bg-slate-100"
+                              >
+                                <div class="flex-1">
+                                  <span class="text-sm font-medium text-slate-700">{runner.runnerName}</span>
+                                  {runner.startTime && (
+                                    <span class="ml-2 text-xs text-slate-500">
+                                      {new Date(runner.startTime).toLocaleString()}
+                                    </span>
+                                  )}
+                                </div>
+                                <button
+                                  onClick={() => handleUnfollow(runner.competitionId, runner.className, runner.runnerName)}
+                                  disabled={isRemoving}
+                                  class="rounded p-1 text-red-600 hover:bg-red-100 disabled:opacity-50"
+                                  title="Unfollow runner"
+                                >
+                                  {isRemoving ? (
+                                    <div class="h-4 w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent"></div>
+                                  ) : (
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                      />
+                                    </svg>
+                                  )}
+                                </button>
+                              </li>
+                            )
+                          })}
                         </ul>
                       </div>
                     ))}
