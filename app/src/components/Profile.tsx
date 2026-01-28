@@ -221,7 +221,7 @@ export function Profile({ user, onClose, onSignOut }: ProfileProps) {
                                   <span class="text-sm font-medium text-slate-700">{runner.runnerName}</span>
                                   {runner.startTime && (
                                     <span class="ml-2 text-xs text-slate-500">
-                                      {new Date(runner.startTime).toLocaleString()}
+                                      {new Date(runner.startTime).toLocaleString('sv-SE')}
                                     </span>
                                   )}
                                 </div>
