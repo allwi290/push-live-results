@@ -179,10 +179,6 @@ export function App() {
       fetchRunnersForClub(competitionId, clubName)
         .then((res) => {
           setResults(res)
-          // Extract className from the first result in club mode
-          if (res.length > 0 && res[0].className) {
-            setClassName(res[0].className)
-          }
           setLoadingResults(false)
         })
         .catch((err) => {
@@ -192,18 +188,31 @@ export function App() {
     }
   }, [competitionId, className, clubName, selectionMode, classes])
 
-  // Load saved selections when user, competition, or class changes
+  // Load saved selections when results or user changes
   useEffect(() => {
-    if (!user || !competitionId || !className) {
+    if (!user || !competitionId || results.length === 0) {
+      setFollowed([])
       return
     }
 
-    loadSelections(user.uid, competitionId.toString(), className)
-      .then(setFollowed)
+    // Get unique classNames from results
+    const uniqueClasses = [...new Set(results.map(r => r.className).filter((cls): cls is string => Boolean(cls)))]
+    
+    // Load selections for all classes in the current results
+    Promise.all(
+      uniqueClasses.map(cls =>
+        loadSelections(user.uid, competitionId.toString(), cls)
+      )
+    )
+      .then((results) => {
+        // Flatten all selections from all classes
+        const allFollowed = results.flat()
+        setFollowed(allFollowed)
+      })
       .catch((err) => {
         console.error('Failed to load saved selections:', err)
       })
-  }, [user, competitionId, className])
+  }, [user, competitionId, results])
 
   const toggleRunner = async (runnerName: string) => {
     // Check prerequisites
@@ -217,10 +226,12 @@ export function App() {
       return
     }
 
-    if (!className) {
+    // Find the runner to get their className
+    const runner = results.find(r => r.name === runnerName)
+    if (!runner?.className) {
       setStatus({
         kind: 'error',
-        message: `Please select a class first`,
+        message: 'Runner class information not available',
       })
       return
     }
@@ -251,20 +262,19 @@ export function App() {
     // Save to backend
     try {
       if (isAdding) {
-        // Find the competition and runner data to pass to addSelection
+        // Find the competition data to pass to addSelection
         const competition = competitions.find(c => c.id === competitionId)
-        const runner = results.find(r => r.name === runnerName)
         
         await addSelection(
           user.uid, 
           competitionId.toString(), 
-          className,
+          runner.className,
           runnerName,
           competition,
           runner
         )
       } else {
-        await removeSelection(user.uid, competitionId.toString(), className, runnerName)
+        await removeSelection(user.uid, competitionId.toString(), runner.className, runnerName)
       }
       setStatus({ kind: 'success', message: 'Saved' })
       // Clear success message after 2 seconds
