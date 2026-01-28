@@ -179,6 +179,10 @@ export function App() {
       fetchRunnersForClub(competitionId, clubName)
         .then((res) => {
           setResults(res)
+          // Extract className from the first result in club mode
+          if (res.length > 0 && res[0].className) {
+            setClassName(res[0].className)
+          }
           setLoadingResults(false)
         })
         .catch((err) => {
