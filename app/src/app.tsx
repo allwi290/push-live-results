@@ -188,23 +188,18 @@ export function App() {
     }
   }, [competitionId, className, clubName, selectionMode, classes])
 
-  // Load saved selections when user, competition, class or club changes
+  // Load saved selections when user, competition, or class changes
   useEffect(() => {
-    if (!user || !competitionId) {
+    if (!user || !competitionId || !className) {
       return
     }
 
-    const selectionKey = selectionMode === 'class' ? className : clubName
-    if (!selectionKey) {
-      return
-    }
-
-    loadSelections(user.uid, competitionId.toString(), selectionKey)
+    loadSelections(user.uid, competitionId.toString(), className)
       .then(setFollowed)
       .catch((err) => {
         console.error('Failed to load saved selections:', err)
       })
-  }, [user, competitionId, className, clubName, selectionMode])
+  }, [user, competitionId, className])
 
   const toggleRunner = async (runnerName: string) => {
     // Check prerequisites
@@ -218,11 +213,10 @@ export function App() {
       return
     }
 
-    const selectionKey = selectionMode === 'class' ? className : clubName
-    if (!selectionKey) {
+    if (!className) {
       setStatus({
         kind: 'error',
-        message: `Please select a ${selectionMode} first`,
+        message: `Please select a class first`,
       })
       return
     }
@@ -260,13 +254,13 @@ export function App() {
         await addSelection(
           user.uid, 
           competitionId.toString(), 
-          selectionKey,
+          className,
           runnerName,
           competition,
           runner
         )
       } else {
-        await removeSelection(user.uid, competitionId.toString(), selectionKey, runnerName)
+        await removeSelection(user.uid, competitionId.toString(), className, runnerName)
       }
       setStatus({ kind: 'success', message: 'Saved' })
       // Clear success message after 2 seconds
