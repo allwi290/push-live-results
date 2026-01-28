@@ -248,7 +248,18 @@ export function App() {
     // Save to backend
     try {
       if (isAdding) {
-        await addSelection(user.uid, competitionId.toString(), className, runnerName)
+        // Find the competition and runner data to pass to addSelection
+        const competition = competitions.find(c => c.id === competitionId)
+        const runner = results.find(r => r.name === runnerName)
+        
+        await addSelection(
+          user.uid, 
+          competitionId.toString(), 
+          className, 
+          runnerName,
+          competition,
+          runner
+        )
       } else {
         await removeSelection(user.uid, competitionId.toString(), className, runnerName)
       }

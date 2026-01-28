@@ -52,6 +52,7 @@ export interface UserSelection {
   runnerNames: string[]
   createdAt: number
   fcmToken?: string
+  startTime?: number
 }
 
 export interface NotificationPayload {
