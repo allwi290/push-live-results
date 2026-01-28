@@ -26,11 +26,7 @@ export function formatDateLabel(dateStr: string): string {
   } else if (dateOnly.getTime() === tomorrowOnly.getTime()) {
     return 'Tomorrow'
   } else {
-    return date.toLocaleDateString('en-SE', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-    })
+    return date.toLocaleDateString('en-SE')
   }
 }
 
@@ -48,7 +44,7 @@ export function groupCompetitionsByDate(
   })
 
   // Order: Today, Yesterday, then others by date descending
-  const order = ['Today', 'Yesterday']
+  const order = ['Tomorrow', 'Today', 'Yesterday']
   const otherDates = Object.keys(groups)
     .filter((key) => !order.includes(key))
     .sort()
