@@ -7,6 +7,11 @@ export function formatDateLabel(dateStr: string): string {
   yesterday.setDate(yesterday.getDate() - 1)
 
   const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  const tomorrowOnly = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate() + 1,
+  )
   const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate())
   const yesterdayOnly = new Date(
     yesterday.getFullYear(),
@@ -18,8 +23,10 @@ export function formatDateLabel(dateStr: string): string {
     return 'Today'
   } else if (dateOnly.getTime() === yesterdayOnly.getTime()) {
     return 'Yesterday'
+  } else if (dateOnly.getTime() === tomorrowOnly.getTime()) {
+    return 'Tomorrow'
   } else {
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString('en-SE', {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
