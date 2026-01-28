@@ -386,16 +386,19 @@ export const pollActiveSelections = onSchedule(
 
     try {
       const db = getFirestore();
-      const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000;
+      const now = Date.now();
+      const windowStart = now - 30 * 60 * 1000; // 30 minutes ago
+      const windowEnd = now + 180 * 60 * 1000; // 180 minutes from now
 
-      // Get all active selections (created within last 24 hours)
+      // Get selections where startTime is within the window
       const snapshot = await db
         .collection("selections")
-        .where("createdAt", ">", twentyFourHoursAgo)
+        .where("startTime", ">=", windowStart)
+        .where("startTime", "<=", windowEnd)
         .get();
 
       if (snapshot.empty) {
-        logger.info("No active selections to poll");
+        logger.info("No active selections within start time window");
         return;
       }
 
