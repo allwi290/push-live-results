@@ -3,7 +3,7 @@
  */
 
 import {getMessaging} from "firebase-admin/messaging";
-import {getFirestore} from "firebase-admin/firestore";
+import {getFirestore, Timestamp} from "firebase-admin/firestore";
 import * as logger from "firebase-functions/logger";
 import {ResultEntry, UserSelection, NotificationPayload} from "./types";
 
@@ -179,7 +179,7 @@ function getStatusText(status: number): string {
 export async function cleanOldSelections(): Promise<void> {
   try {
     const db = getFirestore();
-    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const thirtyDaysAgo = Timestamp.fromMillis(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
     const snapshot = await db
       .collection(SELECTIONS_COLLECTION)
