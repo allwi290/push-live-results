@@ -3,6 +3,8 @@ import type { User } from 'firebase/auth'
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore'
 import { db, getCurrentFCMToken } from '../services/firebase'
 import { removeSelection } from '../services/selections'
+import { fetchCompetitions } from '../services/liveResults'
+import type { Competition } from '../types/live-results'
 
 const buttonBase =
   'rounded-lg px-4 py-3 text-sm font-semibold shadow-sm transition active:scale-[0.99]'
@@ -34,12 +36,20 @@ export function Profile({ user, onClose, onSignOut }: ProfileProps) {
   })
   const [loading, setLoading] = useState(true)
   const [removingRunner, setRemovingRunner] = useState<string | null>(null)
+  const [competitions, setCompetitions] = useState<Competition[]>([])
 
   useEffect(() => {
     async function load() {
       try {
         setLoading(true)
-        const currentToken = await getCurrentFCMToken()
+        
+        // Load competitions and selections in parallel
+        const [comps, currentToken] = await Promise.all([
+          fetchCompetitions(),
+          getCurrentFCMToken(),
+        ])
+        
+        setCompetitions(comps)
         
         const selectionsRef = collection(db, 'selections')
         const q = query(selectionsRef, where('userId', '==', user.uid))
@@ -119,6 +129,11 @@ export function Profile({ user, onClose, onSignOut }: ProfileProps) {
     }))
   }
 
+  const getCompetitionName = (competitionId: string) => {
+    const comp = competitions.find((c) => c.id.toString() === competitionId)
+    return comp ? comp.name : `Competition #${competitionId}`
+  }
+
   return (
     <div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
       <div class="my-8 w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
@@ -185,7 +200,7 @@ export function Profile({ user, onClose, onSignOut }: ProfileProps) {
                         <div class="mb-2 flex items-center justify-between">
                           <div>
                             <p class="text-sm font-semibold text-slate-900">
-                              Competition #{group.competitionId}
+                              {getCompetitionName(group.competitionId)}
                             </p>
                             <p class="text-xs text-slate-600">{group.className}</p>
                           </div>
@@ -254,7 +269,7 @@ export function Profile({ user, onClose, onSignOut }: ProfileProps) {
                         <div class="mb-2 flex items-center justify-between">
                           <div>
                             <p class="text-sm font-semibold text-slate-900">
-                              Competition #{group.competitionId}
+                              {getCompetitionName(group.competitionId)}
                             </p>
                             <p class="text-xs text-slate-600">{group.className}</p>
                           </div>
