@@ -2,6 +2,8 @@
  * Type definitions for LiveResults API
  */
 
+import {Timestamp} from "firebase-admin/firestore";
+
 export interface Competition {
   id: number
   name: string
@@ -42,7 +44,7 @@ export interface ApiResponse<T> {
 export interface CachedData {
   hash: string
   data: unknown
-  timestamp: number
+  timestamp: Timestamp | number // Timestamp for new entries, number for backward compatibility
 }
 
 export interface UserSelection {

@@ -2,7 +2,7 @@
  * Firestore cache management for LiveResults API responses
  */
 
-import {getFirestore} from "firebase-admin/firestore";
+import {getFirestore, Timestamp} from "firebase-admin/firestore";
 import * as logger from "firebase-functions/logger";
 import {CachedData} from "./types";
 
@@ -36,9 +36,10 @@ export async function getCachedData(
 
     const data = doc.data() as CachedData;
     const now = Date.now();
+    const timestamp = data.timestamp instanceof Timestamp ? data.timestamp.toMillis() : data.timestamp;
 
     // Check if cache is expired
-    if (now - data.timestamp > ttlMs) {
+    if (now - timestamp > ttlMs) {
       logger.info(`Cache expired for key: ${cacheKey}`);
       return null;
     }
@@ -73,7 +74,7 @@ export async function setCachedData(
     const cachedData: CachedData = {
       hash,
       data,
-      timestamp: Date.now(),
+      timestamp: Timestamp.now(),
     };
 
     await docRef.set(cachedData);
@@ -109,7 +110,7 @@ export function getCacheKey(params: Record<string, string | number>): string {
 export async function cleanOldCache(): Promise<void> {
   try {
     const db = getFirestore();
-    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const sevenDaysAgo = Timestamp.fromMillis(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
     const snapshot = await db
       .collection(CACHE_COLLECTION)
