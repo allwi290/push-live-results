@@ -160,7 +160,12 @@ export function App() {
       setLoadingResults(true)
       fetchClassResults(competitionId, className)
         .then(({ results }) => {
-          setResults(results)
+          // Ensure className is set on all results (for storage consistency)
+          const resultsWithClass = results.map(r => ({
+            ...r,
+            className: r.className || className
+          }))
+          setResults(resultsWithClass)
           setLoadingResults(false)
         })
         .catch((err) => {
