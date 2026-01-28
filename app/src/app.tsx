@@ -19,6 +19,7 @@ import { AuthModal } from './components/AuthModal'
 import { CompetitionSelector } from './components/CompetitionSelector'
 import { RunnerFollower } from './components/RunnerFollower'
 import { LiveResultsDisplay } from './components/LiveResultsDisplay'
+import { Profile } from './components/Profile'
 import type { Club, Competition, RaceClass, ResultEntry } from './types/live-results'
 
 type Status = { kind: 'idle' | 'info' | 'error' | 'success'; message: string }
@@ -30,6 +31,7 @@ export function App() {
   const [user, setUser] = useState<User | null>(null)
   const [status, setStatus] = useState<Status>({ kind: 'idle', message: '' })
   const [showAuthModal, setShowAuthModal] = useState(false)
+  const [showProfile, setShowProfile] = useState(false)
 
   const [competitions, setCompetitions] = useState<Competition[]>([])
   const [classes, setClasses] = useState<RaceClass[]>([])
@@ -306,14 +308,14 @@ export function App() {
         <div class="text-right">
           {user ? (
             <>
-              <p class="text-sm font-medium">
+              <p class="text-sm font-medium text-slate-700">
                 {user.displayName || user.email || 'Account'}
               </p>
               <button
-                class={`${buttonBase} bg-slate-100 text-slate-700`}
-                onClick={signOutUser}
+                class={`${buttonBase} mt-1 bg-emerald-600 text-white hover:bg-emerald-700`}
+                onClick={() => setShowProfile(true)}
               >
-                Sign out
+                Profile
               </button>
             </>
           ) : (
@@ -358,6 +360,17 @@ export function App() {
       <LiveResultsDisplay results={results} />
 
       {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
+      
+      {showProfile && user && (
+        <Profile
+          user={user}
+          onClose={() => setShowProfile(false)}
+          onSignOut={async () => {
+            await signOutUser()
+            setShowProfile(false)
+          }}
+        />
+      )}
     </div>
   )
 }

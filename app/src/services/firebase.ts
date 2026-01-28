@@ -115,3 +115,24 @@ export async function requestNotificationPermission() {
   const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY
   return getToken(messaging, vapidKey ? { vapidKey } : undefined)
 }
+
+export async function getCurrentFCMToken(): Promise<string | null> {
+  const messaging = await messagingPromise
+  if (!messaging) return null
+
+  try {
+    // Wait for service worker to be ready
+    await serviceWorkerRegistration
+
+    const permission = Notification.permission
+    if (permission !== 'granted') {
+      return null
+    }
+
+    const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY
+    return getToken(messaging, vapidKey ? { vapidKey } : undefined)
+  } catch (error) {
+    console.warn('Could not get FCM token:', error)
+    return null
+  }
+}

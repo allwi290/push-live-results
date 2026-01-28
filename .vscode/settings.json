@@ -1,8 +1,11 @@
 {
     "cSpell.words": [
         "getclassresult",
+        "getclubs",
+        "getcompetitioninfo",
         "getcompetitions",
-        "passtime"
+        "passtime",
+        "timediff"
     ],
     "chat.tools.terminal.autoApprove": {
         "firebase": true
