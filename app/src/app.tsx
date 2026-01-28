@@ -188,18 +188,23 @@ export function App() {
     }
   }, [competitionId, className, clubName, selectionMode, classes])
 
-  // Load saved selections when user, competition, or class changes
+  // Load saved selections when user, competition, class or club changes
   useEffect(() => {
-    if (!user || !competitionId || !className || selectionMode !== 'class') {
+    if (!user || !competitionId) {
       return
     }
 
-    loadSelections(user.uid, competitionId.toString(), className)
+    const selectionKey = selectionMode === 'class' ? className : clubName
+    if (!selectionKey) {
+      return
+    }
+
+    loadSelections(user.uid, competitionId.toString(), selectionKey)
       .then(setFollowed)
       .catch((err) => {
         console.error('Failed to load saved selections:', err)
       })
-  }, [user, competitionId, className, selectionMode])
+  }, [user, competitionId, className, clubName, selectionMode])
 
   const toggleRunner = async (runnerName: string) => {
     // Check prerequisites
@@ -208,17 +213,17 @@ export function App() {
       return
     }
 
-    if (selectionMode === 'club') {
-      setStatus({
-        kind: 'error',
-        message:
-          'Saving alerts is currently available for class selections. Please pick a class.',
-      })
+    if (!competitionId) {
+      setStatus({ kind: 'error', message: 'Please select a competition first' })
       return
     }
 
-    if (!competitionId || !className) {
-      setStatus({ kind: 'error', message: 'Please select a competition and class first' })
+    const selectionKey = selectionMode === 'class' ? className : clubName
+    if (!selectionKey) {
+      setStatus({
+        kind: 'error',
+        message: `Please select a ${selectionMode} first`,
+      })
       return
     }
 
@@ -255,13 +260,13 @@ export function App() {
         await addSelection(
           user.uid, 
           competitionId.toString(), 
-          className, 
+          selectionKey,
           runnerName,
           competition,
           runner
         )
       } else {
-        await removeSelection(user.uid, competitionId.toString(), className, runnerName)
+        await removeSelection(user.uid, competitionId.toString(), selectionKey, runnerName)
       }
       setStatus({ kind: 'success', message: 'Saved' })
       // Clear success message after 2 seconds
