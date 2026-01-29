@@ -147,6 +147,7 @@ export async function notifyResultChanges(
           );
 
         await Promise.allSettled(notificationPromises);
+        logger.info(`Notifications sent for runner: ${newResult.name}`, payload);
       }
     }
   } catch (error) {
