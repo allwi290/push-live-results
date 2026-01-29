@@ -270,9 +270,6 @@ export function Profile({ user, onClose, onSignOut }: ProfileProps) {
                             </p>
                             <p class="text-xs text-slate-600">{group.className}</p>
                           </div>
-                          <span class="rounded-full bg-slate-200 px-2 py-1 text-xs font-medium text-slate-700">
-                            {group.runners.length} runner{group.runners.length !== 1 ? 's' : ''}
-                          </span>
                         </div>
                         <ul class="mt-2 space-y-2">
                           {group.runners.map((runner) => {
