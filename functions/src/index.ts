@@ -21,7 +21,7 @@ import {
   cleanOldCache,
   CACHE_TTL,
 } from "./cache";
-import { notifyResultChanges, cleanOldSelections } from "./notifications";
+import { notifyResultChanges, notifyPassingChanges, cleanOldSelections } from "./notifications";
 import type { ResultEntry } from "./types";
 
 // Initialize Firebase Admin
@@ -510,95 +510,78 @@ export const pollActiveSelections = onSchedule(
 
     try {
       const db = getFirestore();
-      const now = Date.now();
-      const windowStart = now - 180 * 60 * 1000; // 30 minutes ago
-      const windowEnd = now + 30 * 60 * 1000; // 180 minutes from now
+      const now = new Date();
+      const windowStart = now.getTime() - 30 * 60 * 1000; // 30 minutes ago (timestamp in ms)
+      const windowEnd = now.getTime() + 180 * 60 * 1000; // 180 minutes from now (timestamp in ms)
 
-      // Get selections where startTime is within the window
-      // Ensure windowStart and windowEnd are treated as numbers, not strings
+      // Get selections where startTime is within the window (numeric timestamp)
       const query = db
         .collection("selections")
-        .where("startTime", ">=", Number(windowStart))
-        .where("startTime", "<=", Number(windowEnd));
-      const snapshot = await query.get()
+        .where("startTime", ">=", windowStart)
+        .where("startTime", "<=", windowEnd);
+      const snapshot = await query.get();
+      
       if (snapshot.empty) {
         logger.info("No active selections within start time window");
         return;
       }
 
-      // Group selections by competition/class to deduplicate API calls
-      const uniqueTargets = new Map<
-        string,
-        { compId: string; className: string }
-      >();
+      // Group selections by competition to deduplicate API calls
+      // getlastpassings returns all passings for a competition across all classes
+      const uniqueCompetitions = new Set<string>();
 
       snapshot.docs.forEach((doc) => {
         const selection = doc.data();
-        const key = `${selection.competitionId}_${selection.className}`;
-        if (!uniqueTargets.has(key)) {
-          uniqueTargets.set(key, {
-            compId: selection.competitionId,
-            className: selection.className,
-          });
-        }
+        uniqueCompetitions.add(selection.competitionId);
       });
 
       logger.info(
-        `Polling ${uniqueTargets.size} unique competition/class combinations for ${snapshot.size} active selections`,
+        `Polling ${uniqueCompetitions.size} unique competitions for ${snapshot.size} active selections`,
       );
 
-      // Poll each unique competition/class
-      for (const [key, target] of uniqueTargets) {
+      // Poll each unique competition
+      for (const compId of uniqueCompetitions) {
         try {
           const cacheKey = getCacheKey({
-            method: "getclassresult",
-            comp: target.compId,
-            class: target.className,
+            method: "getlastpassings",
+            comp: compId,
           });
 
           // Get cached data to compare
-          const cached = await getCachedData(cacheKey, CACHE_TTL.CLASS_RESULTS);
-          const oldResults = (cached?.data as ResultEntry[]) || [];
+          const cached = await getCachedData(cacheKey, CACHE_TTL.LAST_PASSINGS);
+          const cachedHash = cached?.hash;
 
           // Fetch fresh data from LiveResults API
-          const resultsResult = await fetchClassResults(
-            parseInt(target.compId),
-            target.className,
+          const passingsResult = await fetchLastPassings(
+            parseInt(compId),
+            cachedHash,
           );
 
-          if (resultsResult.status === "NOT MODIFIED") {
-            logger.info(`No changes for ${key}`);
+          if (passingsResult.status === "NOT MODIFIED") {
+            logger.info(`No new passings for competition ${compId}`);
             continue;
           }
 
-          if (resultsResult.status !== "OK" || !resultsResult.data) {
-            logger.warn(`Failed to fetch results for ${key}`);
+          if (passingsResult.status !== "OK" || !passingsResult.data) {
+            logger.warn(`Failed to fetch passings for competition ${compId}`);
             continue;
           }
 
-          const newResults = resultsResult.data;
+          const newPassings = passingsResult.data;
 
-          // Check if results actually changed (comparing with cached data)
-          if (oldResults.length > 0) {
-            logger.info(
-              `Detected changes for ${key} - triggering notifications`,
-            );
-            await notifyResultChanges(
-              target.compId,
-              target.className,
-              oldResults,
-              newResults,
-            );
-          } else {
-            logger.info(`First poll for ${key} - establishing baseline`);
-          }
+          logger.info(
+            `Detected ${newPassings.length} new passings for competition ${compId}`,
+          );
 
-          // Update cache with new data
-          if (resultsResult.hash) {
-            await setCachedData(cacheKey, resultsResult.hash, newResults);
+          // Process passings and send notifications
+          await notifyPassingChanges(compId, newPassings);
+
+          // Update cache with new hash
+          if (passingsResult.hash) {
+            await setCachedData(cacheKey, passingsResult.hash, newPassings);
           }
         } catch (error) {
-          logger.error(`Error polling ${key}:`, error);
+          logger.error(`Error polling competition ${compId}:`, error);
         }
       }
 

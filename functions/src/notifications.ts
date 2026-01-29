@@ -5,7 +5,7 @@
 import {getMessaging} from "firebase-admin/messaging";
 import {getFirestore, Timestamp} from "firebase-admin/firestore";
 import * as logger from "firebase-functions/logger";
-import {ResultEntry, UserSelection, NotificationPayload} from "./types";
+import {ResultEntry, UserSelection, NotificationPayload, LastPassing} from "./types";
 
 const SELECTIONS_COLLECTION = "selections";
 
@@ -66,6 +66,73 @@ export async function sendPushNotification(
   } catch (error) {
     logger.error("Error sending notification:", error);
     throw error;
+  }
+}
+
+/**
+ * Process new passings and send notifications to followers
+ */
+export async function notifyPassingChanges(
+  competitionId: string,
+  passings: LastPassing[]
+): Promise<void> {
+  try {
+    // Get all selections for this competition
+    const db = getFirestore();
+    const snapshot = await db
+      .collection(SELECTIONS_COLLECTION)
+      .where("competitionId", "==", competitionId)
+      .get();
+
+    if (snapshot.empty) {
+      logger.info(`No users following competition ${competitionId}`);
+      return;
+    }
+
+    const selections = snapshot.docs.map((doc) => doc.data() as UserSelection);
+
+    // Process each passing and notify relevant users
+    for (const passing of passings) {
+      // Find users following this runner in this class
+      const followers = selections.filter(
+        (selection) =>
+          selection.className === passing.class &&
+          selection.runnerName === passing.runnerName
+      );
+
+      if (followers.length === 0) {
+        continue;
+      }
+
+      // Create notification payload
+      const payload: NotificationPayload = {
+        title: `${passing.class} - ${passing.controlName}`,
+        body: `${passing.runnerName} passed ${passing.controlName} at ${passing.passtime}`,
+        data: {
+          competitionId,
+          className: passing.class,
+          runnerName: passing.runnerName,
+          control: passing.control.toString(),
+          controlName: passing.controlName,
+          passtime: passing.passtime,
+        },
+      };
+
+      // Send notification to all followers of this runner
+      const notificationPromises = followers
+        .filter((follower) => follower.fcmToken)
+        .map((follower) =>
+          sendPushNotification(follower.fcmToken as string, payload)
+        );
+
+      await Promise.allSettled(notificationPromises);
+      logger.info(
+        `Notifications sent for passing: ${passing.runnerName} at ${passing.controlName}`,
+        payload
+      );
+    }
+  } catch (error) {
+    logger.error("Error processing passing changes:", error);
   }
 }
 

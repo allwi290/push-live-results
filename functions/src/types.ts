@@ -51,7 +51,7 @@ export interface UserSelection {
   userId: string
   competitionId: string
   className: string
-  runnerName: string[]
+  runnerName: string
   createdAt: number
   fcmToken?: string
   startTime?: number
