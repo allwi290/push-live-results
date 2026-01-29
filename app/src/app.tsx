@@ -308,14 +308,11 @@ export function App() {
         <div class="text-right">
           {user ? (
             <>
-              <p class="text-sm font-medium text-slate-700">
-                {user.displayName || user.email || 'Account'}
-              </p>
               <button
                 class={`${buttonBase} mt-1 bg-emerald-600 text-white hover:bg-emerald-700`}
                 onClick={() => setShowProfile(true)}
               >
-                Profile
+                {user.displayName || user.email || 'Profile'}
               </button>
             </>
           ) : (
