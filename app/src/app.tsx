@@ -320,7 +320,7 @@ export function App() {
               class={`${buttonBase} bg-emerald-600 text-white`}
               onClick={() => setShowAuthModal(true)}
             >
-              Sign in to follow runners
+              Sign in
             </button>
           )}
         </div>
