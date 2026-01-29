@@ -99,7 +99,7 @@ export async function notifyResultChanges(
 
       // Find users following this runner
       const followers = selections.filter((selection) =>
-        selection.runnerNames.includes(newResult.name)
+        selection.runnerName.includes(newResult.name)
       );
 
       if (followers.length === 0) {

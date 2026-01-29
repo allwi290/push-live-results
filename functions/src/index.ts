@@ -511,8 +511,8 @@ export const pollActiveSelections = onSchedule(
     try {
       const db = getFirestore();
       const now = Date.now();
-      const windowStart = now - 30 * 60 * 1000; // 30 minutes ago
-      const windowEnd = now + 180 * 60 * 1000; // 180 minutes from now
+      const windowStart = now - 180 * 60 * 1000; // 30 minutes ago
+      const windowEnd = now + 30 * 60 * 1000; // 180 minutes from now
 
       // Get selections where startTime is within the window
       // Ensure windowStart and windowEnd are treated as numbers, not strings
