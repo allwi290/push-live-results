@@ -391,10 +391,11 @@ export const pollActiveSelections = onSchedule(
       const windowEnd = now + 180 * 60 * 1000; // 180 minutes from now
 
       // Get selections where startTime is within the window
+      // Ensure windowStart and windowEnd are treated as numbers, not strings
       const snapshot = await db
         .collection("selections")
-        .where("startTime", ">=", windowStart)
-        .where("startTime", "<=", windowEnd)
+        .where("startTime", ">=", Number(windowStart))
+        .where("startTime", "<=", Number(windowEnd))
         .get();
 
       if (snapshot.empty) {
