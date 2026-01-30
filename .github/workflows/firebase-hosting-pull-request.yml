@@ -35,6 +35,7 @@ jobs:
       - name: Deploy Cloud Functions (preview)
         uses: w9jds/firebase-action@master
         with:
-          args: deploy --only functions --project push-live-results
+          args: deploy --only functions
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PUSH_LIVE_RESULTS }}
+          PROJECT_ID: push-live-results
