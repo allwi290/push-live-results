@@ -21,7 +21,11 @@ import {
   cleanOldCache,
   CACHE_TTL,
 } from "./cache";
-import { notifyResultChanges, notifyPassingChanges, cleanOldSelections } from "./notifications";
+import {
+  notifyResultChanges,
+  notifyPassingChanges,
+  cleanOldSelections,
+} from "./notifications";
 import type { ResultEntry } from "./types";
 
 // Initialize Firebase Admin
@@ -520,9 +524,11 @@ export const pollActiveSelections = onSchedule(
         .where("startTime", ">=", windowStart)
         .where("startTime", "<=", windowEnd);
       const snapshot = await query.get();
-      
+
       if (snapshot.empty) {
-        logger.info("No active selections within start time window");
+        logger.info(
+          `No active selections within start time window ${new Date(windowStart).toISOString()} - ${new Date(windowEnd).toISOString()}`,
+        );
         return;
       }
 
