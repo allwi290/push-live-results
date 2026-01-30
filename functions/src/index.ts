@@ -527,7 +527,7 @@ export const pollActiveSelections = onSchedule(
 
       if (snapshot.empty) {
         logger.info(
-          `No active selections within start time window ${new Date(windowStart).toISOString()} - ${new Date(windowEnd).toISOString()}`,
+          `No active selections within start time window ${new Date(windowStart).toISOString().split("T")[1]} - ${new Date(windowEnd).toISOString().split("T")[1]}`,
         );
         return;
       }
