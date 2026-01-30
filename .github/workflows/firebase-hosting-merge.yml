@@ -29,3 +29,13 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PUSH_LIVE_RESULTS }}
           channelId: live
           projectId: push-live-results
+          target: hosting
+      
+      # Deploy functions explicitly
+      - name: Deploy Cloud Functions
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only functions
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          PROJECT_ID: push-live-results

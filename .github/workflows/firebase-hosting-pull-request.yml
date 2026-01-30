@@ -13,11 +13,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npm ci && npm run build
+      
+      # Build frontend
+      - name: Build frontend
+        run: npm ci && npm run build
         working-directory: app
+      
+      # Build functions
+      - name: Build functions
+        run: npm ci && npm run build
+        working-directory: functions
 
+      # Deploy preview for hosting
       - uses: FirebaseExtended/action-hosting-deploy@v0.9.0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PUSH_LIVE_RESULTS }}
           projectId: push-live-results
+      
+      # Deploy functions to preview
+      - name: Deploy Cloud Functions (preview)
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only functions
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          PROJECT_ID: push-live-results
