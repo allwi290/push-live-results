@@ -29,7 +29,6 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PUSH_LIVE_RESULTS }}
           channelId: live
           projectId: push-live-results
-          target: hosting
       
       # Deploy functions explicitly
       - name: Deploy Cloud Functions
