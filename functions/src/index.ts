@@ -532,65 +532,83 @@ export const pollActiveSelections = onSchedule(
         return;
       }
 
-      // Group selections by competition to deduplicate API calls
-      // getlastpassings returns all passings for a competition across all classes
-      const uniqueCompetitions = new Set<string>();
+      // Group selections by competition/class to deduplicate API calls
+      const uniqueTargets = new Map<
+        string,
+        { compId: string; className: string }
+      >();
 
       snapshot.docs.forEach((doc) => {
         const selection = doc.data();
-        uniqueCompetitions.add(selection.competitionId);
+        const key = `${selection.competitionId}_${selection.className}`;
+        if (!uniqueTargets.has(key)) {
+          uniqueTargets.set(key, {
+            compId: selection.competitionId,
+            className: selection.className,
+          });
+        }
       });
 
       logger.info(
-        `Polling ${uniqueCompetitions.size} unique competitions for ${snapshot.size} active selections`,
+        `Polling ${uniqueTargets.size} unique competition/class combinations for ${snapshot.size} active selections`,
       );
 
-      // Poll each unique competition
-      for (const compId of uniqueCompetitions) {
+      // Poll each unique competition/class
+      for (const [key, target] of uniqueTargets) {
         try {
           const cacheKey = getCacheKey({
-            method: "getlastpassings",
-            comp: compId,
+            method: "getclassresult",
+            comp: target.compId,
+            class: target.className,
           });
 
           // Get cached data to compare
-          const cached = await getCachedData(cacheKey, CACHE_TTL.LAST_PASSINGS);
+          const cached = await getCachedData(cacheKey, CACHE_TTL.CLASS_RESULTS);
+          const oldResults = (cached?.data as ResultEntry[]) || [];
           const cachedHash = cached?.hash;
 
           // Fetch fresh data from LiveResults API
-          const passingsResult = await fetchLastPassings(
-            parseInt(compId),
+          const resultsResult = await fetchClassResults(
+            parseInt(target.compId),
+            target.className,
             cachedHash,
           );
 
-          if (passingsResult.status === "NOT MODIFIED") {
-            logger.info(`No new passings for competition ${compId}`);
+          if (resultsResult.status === "NOT MODIFIED") {
+            logger.info(`No changes for ${key}`);
             continue;
           }
 
-          if (passingsResult.status !== "OK" || !passingsResult.data) {
-            logger.warn(`Failed to fetch passings for competition ${compId}`);
+          if (resultsResult.status !== "OK" || !resultsResult.data) {
+            logger.warn(`Failed to fetch results for ${key}`);
             continue;
           }
 
-          const newPassings = passingsResult.data;
+          const newResults = resultsResult.data;
 
-          logger.info(
-            `Detected ${newPassings.length} new passings for competition ${compId}`,
-          );
+          // Check if results actually changed (comparing with cached data)
+          if (oldResults.length > 0) {
+            logger.info(
+              `Detected changes for ${key} - triggering notifications`,
+            );
+            await notifyResultChanges(
+              target.compId,
+              target.className,
+              oldResults,
+              newResults,
+            );
+          } else {
+            logger.info(`First poll for ${key} - establishing baseline`);
+          }
 
-          // Process passings and send notifications
-          await notifyPassingChanges(compId, newPassings);
-
-          // Update cache with new hash
-          if (passingsResult.hash) {
-            await setCachedData(cacheKey, passingsResult.hash, newPassings);
+          // Update cache with new data
+          if (resultsResult.hash) {
+            await setCachedData(cacheKey, resultsResult.hash, newResults);
           }
         } catch (error) {
-          logger.error(`Error polling competition ${compId}:`, error);
+          logger.error(`Error polling ${key}:`, error);
         }
       }
-
       logger.info("Active selections polling completed");
     } catch (error) {
       logger.error("Error in pollActiveSelections:", error);
