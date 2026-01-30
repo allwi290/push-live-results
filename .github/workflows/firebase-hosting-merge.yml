@@ -37,4 +37,3 @@ jobs:
           args: deploy --only functions
         env:
           GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PUSH_LIVE_RESULTS }}
-          PROJECT_ID: push-live-results
