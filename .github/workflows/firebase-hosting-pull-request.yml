@@ -32,9 +32,18 @@ jobs:
           projectId: push-live-results
       
       # Deploy functions to preview
-      - name: Deploy Cloud Functions (preview)
-        uses: w9jds/firebase-action@master
+      - name: Setup Node.js for Functions
+        uses: actions/setup-node@v4
         with:
-          args: deploy --only functions
+          node-version: '20'
+      
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+      
+      - name: Authenticate and Deploy Functions
+        run: |
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_PUSH_LIVE_RESULTS }}' > /tmp/gcp_key.json
+          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp_key.json
+          firebase deploy --only functions
         env:
-          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PUSH_LIVE_RESULTS }}
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcp_key.json
