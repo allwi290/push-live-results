@@ -23,7 +23,6 @@ import {
 } from "./cache";
 import {
   notifyResultChanges,
-  notifyPassingChanges,
   cleanOldSelections,
 } from "./notifications";
 import type { ResultEntry } from "./types";
