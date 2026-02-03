@@ -1,0 +1,17 @@
+{
+  "name": "Push Live Results",
+  "short_name": "Live Results",
+  "description": "Live results with push notifications.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FF8A00",
+  "theme_color": "#FF8A00",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
