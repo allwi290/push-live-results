@@ -14,6 +14,7 @@ import {
 } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 import { getMessaging, getToken, isSupported } from 'firebase/messaging'
+import type { GetTokenOptions } from 'firebase/messaging'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -94,26 +95,46 @@ export async function signOutUser() {
   await signOut(auth)
 }
 
-export async function requestNotificationPermission() {
-  const messaging = await messagingPromise
-  if (!messaging) return null
+async function requestBrowserNotificationPermission(): Promise<NotificationPermission> {
+  if (typeof Notification === 'undefined') {
+    throw new Error('Notifications are not supported in this browser')
+  }
 
+  if (Notification.permission === 'granted') {
+    return 'granted'
+  }
+
+  return Notification.requestPermission()
+}
+
+export async function requestNotificationPermission() {
   // Ensure user is authenticated
   const currentUser = auth.currentUser
   if (!currentUser) {
     throw new Error('User must be authenticated to request notifications')
   }
 
-  // Wait for service worker to be ready
-  await serviceWorkerRegistration
-
-  const permission = await Notification.requestPermission()
+  // IMPORTANT (iOS Safari): permission prompting must happen in the same user gesture
+  // call stack, so do not `await` anything before this.
+  const permission = await requestBrowserNotificationPermission()
   if (permission !== 'granted') {
     throw new Error('Notifications not allowed by user')
   }
 
+  const messaging = await messagingPromise
+  if (!messaging) return null
+
+  // Wait for service worker to be ready
+  const registration = await serviceWorkerRegistration
+
   const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY
-  return getToken(messaging, vapidKey ? { vapidKey } : undefined)
+
+  const options: GetTokenOptions = {
+    ...(vapidKey ? { vapidKey } : {}),
+    ...(registration ? { serviceWorkerRegistration: registration } : {}),
+  }
+
+  return getToken(messaging, Object.keys(options).length ? options : undefined)
 }
 
 export async function getCurrentFCMToken(): Promise<string | null> {
@@ -122,7 +143,7 @@ export async function getCurrentFCMToken(): Promise<string | null> {
 
   try {
     // Wait for service worker to be ready
-    await serviceWorkerRegistration
+    const registration = await serviceWorkerRegistration
 
     const permission = Notification.permission
     if (permission !== 'granted') {
@@ -130,7 +151,13 @@ export async function getCurrentFCMToken(): Promise<string | null> {
     }
 
     const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY
-    return getToken(messaging, vapidKey ? { vapidKey } : undefined)
+
+    const options: GetTokenOptions = {
+      ...(vapidKey ? { vapidKey } : {}),
+      ...(registration ? { serviceWorkerRegistration: registration } : {}),
+    }
+
+    return getToken(messaging, Object.keys(options).length ? options : undefined)
   } catch (error) {
     console.warn('Could not get FCM token:', error)
     return null

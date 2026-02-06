@@ -1,5 +1,5 @@
 import { doc, serverTimestamp, setDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore'
-import { db, requestNotificationPermission } from './firebase'
+import { db, getCurrentFCMToken } from './firebase'
 import type { Competition, ResultEntry } from '../types/live-results'
 
 /**
@@ -46,7 +46,7 @@ export async function addSelection(
   // Get FCM token for push notifications
   let fcmToken: string | undefined
   try {
-    fcmToken = (await requestNotificationPermission()) || undefined
+    fcmToken = (await getCurrentFCMToken()) || undefined
   } catch (error) {
     console.warn('Could not get FCM token:', error)
   }
