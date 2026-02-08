@@ -15,6 +15,11 @@ export interface RaceClass {
   className: string
 }
 
+export interface SplitControl {
+  code: number
+  name: string
+}
+
 export interface ResultEntry {
   place: string
   name: string
@@ -22,8 +27,10 @@ export interface ResultEntry {
   result: string
   status: number
   timeplus: string
-  progress: string
+  progress: number
   start: number
+  splits?: Record<string, string | number>
+  DT_RowClass?: string
 }
 
 export interface LastPassing {

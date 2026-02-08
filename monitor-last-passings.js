@@ -18,7 +18,7 @@ const path = require('path');
 const https = require('https');
 
 const API_URL = 'https://liveresultat.orientering.se/api.php';
-
+const basePath = './data'; // Base directory for saving data
 /**
  * Parse command line arguments
  */
@@ -99,7 +99,7 @@ function fetchFromAPI(params) {
 function saveResponse(dataDir, timestamp, lastHash, response) {
   const hashStr = lastHash ? lastHash.slice(0, 8) : 'none';
   const filename = `data_${timestamp}_${hashStr}.json`;
-  const filepath = path.join(dataDir, filename);
+  const filepath = path.join(basePath, dataDir, filename);
 
   const output = {
     timestamp: response.timestamp,

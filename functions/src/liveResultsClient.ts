@@ -9,6 +9,7 @@ import {
   RaceClass,
   ResultEntry,
   LastPassing,
+  SplitControl,
 } from "./types";
 import JSON5 from "json5";
 
@@ -28,42 +29,54 @@ function sanitizeControlCharacters(uint8Array: Uint8Array): void {
 }
 
 /**
+ * Raw fetch from LiveResults API, returning the full parsed response
+ */
+async function fetchRawFromAPI(
+  params: Record<string, string>,
+): Promise<{ status: string; hash?: string; raw: Record<string, unknown> }> {
+  const url = new URL(LIVE_RESULTS_API);
+  Object.entries(params).forEach(([key, value]) => {
+    url.searchParams.set(key, value);
+  });
+
+  const response = await fetch(url.toString());
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  const uint8Array = new Uint8Array(arrayBuffer);
+
+  sanitizeControlCharacters(uint8Array);
+
+  const text = new TextDecoder("utf-8", { fatal: false }).decode(uint8Array);
+  const data = JSON5.parse(text);
+
+  if (data.status === "NOT MODIFIED") {
+    return { status: "NOT MODIFIED", hash: data.hash, raw: data };
+  }
+
+  return { status: "OK", hash: data.hash, raw: data };
+}
+
+/**
  * Generic fetch function for LiveResults API
  */
 async function fetchFromAPI<T>(
   params: Record<string, string>,
   dataKey: string,
 ): Promise<ApiResponse<T>> {
-  const url = new URL(LIVE_RESULTS_API);
-  Object.entries(params).forEach(([key, value]) => {
-    url.searchParams.set(key, value);
-  });
-
   try {
-    const response = await fetch(url.toString());
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
+    const { status, hash, raw } = await fetchRawFromAPI(params);
 
-    const arrayBuffer = await response.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
-
-    sanitizeControlCharacters(uint8Array);
-
-    const text = new TextDecoder("utf-8", { fatal: false }).decode(uint8Array);
-    const data = JSON5.parse(text);
-
-    if (data.status === "NOT MODIFIED") {
-      return {
-        status: "NOT MODIFIED",
-        hash: data.hash,
-      };
+    if (status === "NOT MODIFIED") {
+      return { status: "NOT MODIFIED", hash };
     }
 
     return {
       status: "OK",
-      hash: data.hash,
-      data: data[dataKey] || [],
+      hash,
+      data: (raw[dataKey] || []) as T,
     };
   } catch (error) {
     logger.error(`Error fetching from API (${params.method}):`, error);
@@ -153,6 +166,52 @@ export async function fetchClassResults(
   }
 
   return fetchFromAPI<ResultEntry[]>(params, "results");
+}
+
+export interface ClassResultsFull {
+  status: string
+  hash?: string
+  results?: ResultEntry[]
+  splitcontrols?: SplitControl[]
+}
+
+/**
+ * Fetch results for a specific class, including splitcontrols metadata.
+ * Used for sending rich push notifications with control names.
+ */
+export async function fetchClassResultsFull(
+  compId: number,
+  className: string,
+  lastHash?: string,
+): Promise<ClassResultsFull> {
+  const params: Record<string, string> = {
+    method: "getclassresults",
+    comp: compId.toString(),
+    class: className,
+    unformattedTimes: "false",
+    lang: "en",
+  };
+  if (lastHash) {
+    params.last_hash = lastHash;
+  }
+
+  try {
+    const { status, hash, raw } = await fetchRawFromAPI(params);
+
+    if (status === "NOT MODIFIED") {
+      return { status: "NOT MODIFIED", hash };
+    }
+
+    return {
+      status: "OK",
+      hash,
+      results: (raw.results || []) as ResultEntry[],
+      splitcontrols: (raw.splitcontrols || []) as SplitControl[],
+    };
+  } catch (error) {
+    logger.error("Error fetching class results full:", error);
+    return { status: "ERROR" };
+  }
 }
 
 /**

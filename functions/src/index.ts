@@ -12,6 +12,7 @@ import {
   fetchCompetitions,
   fetchClasses,
   fetchClassResults,
+  fetchClassResultsFull,
   fetchLastPassings,
 } from "./liveResultsClient";
 import {
@@ -193,7 +194,7 @@ export const api = onRequest(
             );
           }
 
-          const resultsResult = await fetchClassResults(
+          const resultsResult = await fetchClassResultsFull(
             compId,
             className,
             lastHash,
@@ -201,7 +202,7 @@ export const api = onRequest(
 
           if (
             resultsResult.status === "OK" &&
-            resultsResult.data &&
+            resultsResult.results &&
             resultsResult.hash
           ) {
             // Check for changes and send notifications
@@ -210,7 +211,8 @@ export const api = onRequest(
                 compId.toString(),
                 className,
                 cached.data as ResultEntry[],
-                resultsResult.data,
+                resultsResult.results,
+                resultsResult.splitcontrols,
               );
             } else if (!cached) {
               logger.info(
@@ -225,7 +227,7 @@ export const api = onRequest(
             await setCachedData(
               cacheKey,
               resultsResult.hash,
-              resultsResult.data,
+              resultsResult.results,
             );
             logger.info(
               "Cached getclassresults result: comp=" +
@@ -233,9 +235,13 @@ export const api = onRequest(
                 ", class=" +
                 className +
                 ", results=" +
-                resultsResult.data.length,
+                resultsResult.results.length,
             );
-            res.json(resultsResult);
+            res.json({
+              status: "OK",
+              hash: resultsResult.hash,
+              data: resultsResult.results,
+            });
           } else if (resultsResult.status === "NOT MODIFIED") {
             if (cached) {
               res.json({
@@ -566,8 +572,8 @@ export const pollActiveSelections = onSchedule(
           const oldResults = (cached?.data as ResultEntry[]) || [];
           const cachedHash = cached?.hash;
 
-          // Fetch fresh data from LiveResults API
-          const resultsResult = await fetchClassResults(
+          // Fetch fresh data from LiveResults API (with splitcontrols)
+          const resultsResult = await fetchClassResultsFull(
             parseInt(target.compId),
             target.className,
             cachedHash,
@@ -578,12 +584,12 @@ export const pollActiveSelections = onSchedule(
             continue;
           }
 
-          if (resultsResult.status !== "OK" || !resultsResult.data) {
+          if (resultsResult.status !== "OK" || !resultsResult.results) {
             logger.warn(`Failed to fetch results for ${key}`);
             continue;
           }
 
-          const newResults = resultsResult.data;
+          const newResults = resultsResult.results;
 
           // Check if results actually changed (comparing with cached data)
           if (oldResults.length > 0) {
@@ -595,6 +601,7 @@ export const pollActiveSelections = onSchedule(
               target.className,
               oldResults,
               newResults,
+              resultsResult.splitcontrols,
             );
           } else {
             logger.info(`First poll for ${key} - establishing baseline`);
