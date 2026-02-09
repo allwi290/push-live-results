@@ -1,6 +1,6 @@
 {
   "name": "Push Live Results",
-  "short_name": "Live Results",
+  "short_name": "Push Results",
   "description": "Live results with push notifications.",
   "start_url": "/",
   "display": "standalone",
