@@ -6,15 +6,100 @@ import type {
   Club,
 } from '../types/live-results'
 
-// Points to our Firebase Cloud Functions backend API (NOT directly to external LiveResults API)
-// Backend handles caching and hash-based polling to minimize load on external API
+// Backend API for endpoints that need server-side logic (caching, notifications)
 const API_BASE = import.meta.env.VITE_BACKEND_API_URL || '/api'
+
+// Direct LiveResults API for navigation/read-only endpoints
+const LIVE_RESULTS_API = 'https://liveresultat.orientering.se/api.php'
 
 type ApiResponse<T> = {
   status: string
   hash?: string
 } & T
 
+// --- Local cache helpers (localStorage with TTL and periodic cleanup) ---
+
+interface CacheEntry<T> {
+  data: T
+  timestamp: number
+}
+
+const CACHE_PREFIX = 'lr_cache_'
+const CACHE_TTL = {
+  COMPETITIONS: 15 * 60 * 1000, // 15 minutes
+  CLASSES: 10 * 60 * 1000,      // 10 minutes
+}
+// Max age before an entry is eligible for cleanup
+const CACHE_MAX_AGE = 24 * 60 * 60 * 1000 // 24 hours
+
+function cacheGet<T>(key: string, ttlMs: number): T | null {
+  try {
+    const raw = localStorage.getItem(CACHE_PREFIX + key)
+    if (!raw) return null
+    const entry: CacheEntry<T> = JSON.parse(raw)
+    if (Date.now() - entry.timestamp > ttlMs) {
+      localStorage.removeItem(CACHE_PREFIX + key)
+      return null
+    }
+    return entry.data
+  } catch {
+    return null
+  }
+}
+
+function cacheSet<T>(key: string, data: T): void {
+  try {
+    const entry: CacheEntry<T> = { data, timestamp: Date.now() }
+    localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(entry))
+  } catch {
+    // Storage full — run cleanup and retry once
+    cacheCleanup()
+    try {
+      const entry: CacheEntry<T> = { data, timestamp: Date.now() }
+      localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(entry))
+    } catch {
+      // Still full, give up silently
+    }
+  }
+}
+
+/** Remove all cache entries older than CACHE_MAX_AGE */
+function cacheCleanup(): void {
+  const now = Date.now()
+  const keysToRemove: string[] = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (!key || !key.startsWith(CACHE_PREFIX)) continue
+    try {
+      const raw = localStorage.getItem(key)
+      if (!raw) continue
+      const entry: CacheEntry<unknown> = JSON.parse(raw)
+      if (now - entry.timestamp > CACHE_MAX_AGE) {
+        keysToRemove.push(key)
+      }
+    } catch {
+      keysToRemove.push(key!) // corrupt entry, remove it
+    }
+  }
+  keysToRemove.forEach((k) => localStorage.removeItem(k))
+}
+
+// Run cleanup once on module load to keep storage tidy
+cacheCleanup()
+
+// --- Fetch helpers ---
+
+/** Fetch directly from the LiveResults API (used for navigation endpoints) */
+async function fetchLiveResultsApi<T>(params: URLSearchParams): Promise<T> {
+  const url = `${LIVE_RESULTS_API}?${params.toString()}`
+  const res = await fetch(url)
+  if (!res.ok) {
+    throw new Error(`LiveResults request failed: ${res.status}`)
+  }
+  return (await res.json()) as T
+}
+
+/** Fetch from our backend API (used for endpoints needing server-side logic) */
 async function fetchJson<T>(params: URLSearchParams): Promise<T> {
   const url = `${API_BASE}?${params.toString()}`
   const res = await fetch(url)
@@ -65,10 +150,29 @@ const fallback = {
 }
 
 export async function fetchCompetitions(): Promise<Competition[]> {
+  // Try local cache first
+  const cached = cacheGet<Competition[]>('competitions', CACHE_TTL.COMPETITIONS)
+  if (cached) return cached
+
   try {
     const params = new URLSearchParams({ method: 'getcompetitions' })
-    const data = await fetchJson<{ data: Competition[] }>(params)
-    return data.data
+    const data = await fetchLiveResultsApi<{ competitions: Competition[] }>(params)
+    const competitions = data.competitions || []
+
+    // Apply same filtering as the backend: ±3/4 days window, sorted latest first
+    const now = new Date()
+    const toDate = new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000)
+    const fromDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000)
+
+    const filtered = competitions
+      .filter((comp) => {
+        const compDate = new Date(comp.date)
+        return compDate <= toDate && compDate >= fromDate
+      })
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+    cacheSet('competitions', filtered)
+    return filtered
   } catch (error) {
     console.warn('Using fallback competitions', error)
     return fallback.competitions
@@ -92,22 +196,23 @@ export async function fetchCompetitionInfo(
 
 export async function fetchClasses(
   compId: number,
-  lastHash?: string,
+  _lastHash?: string,
 ): Promise<RaceClass[]> {
+  // Try local cache first
+  const cacheKey = `classes_${compId}`
+  const cached = cacheGet<RaceClass[]>(cacheKey, CACHE_TTL.CLASSES)
+  if (cached) return cached
+
   try {
     const params = new URLSearchParams({
       method: 'getclasses',
       comp: compId.toString(),
     })
-    if (lastHash) {
-      params.append('last_hash', lastHash)
-    }
-    const data = await fetchJson<{ data: RaceClass[] }>(params)
-    return data.data
+    const data = await fetchLiveResultsApi<{ classes: RaceClass[] }>(params)
+    const classes = data.classes || []
+    cacheSet(cacheKey, classes)
+    return classes
   } catch (error) {
-    if (error instanceof Error && error.message === 'NOT_MODIFIED') {
-      throw error
-    }
     console.warn('Using fallback classes', error)
     return fallback.classes
   }

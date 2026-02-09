@@ -9,7 +9,6 @@ import { onRequest } from "firebase-functions/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import * as logger from "firebase-functions/logger";
 import {
-  fetchCompetitions,
   fetchClasses,
   fetchClassResults,
   fetchClassResultsFull,
@@ -57,108 +56,6 @@ export const api = onRequest(
       );
 
       switch (method) {
-        case "getcompetitions": {
-          // Competitions list changes rarely, cache for 1 hour
-          const cacheKey = getCacheKey({ method });
-          const cached = await getCachedData(cacheKey, CACHE_TTL.COMPETITIONS);
-
-          if (cached && lastHash && cached.hash === lastHash) {
-            logger.info("Cache HIT (NOT MODIFIED) for getcompetitions");
-            res.json({ status: "NOT MODIFIED", hash: cached.hash });
-            return;
-          }
-
-          if (cached) {
-            logger.info("Cache HIT for getcompetitions");
-            res.json({
-              status: "OK",
-              hash: cached.hash,
-              data: cached.data,
-            });
-            return;
-          }
-
-          logger.info("Cache MISS for getcompetitions - fetching fresh data");
-          const compsResult = await fetchCompetitions();
-          if (compsResult.status === "OK" && compsResult.data) {
-            await setCachedData(
-              cacheKey,
-              Date.now().toString(),
-              compsResult.data,
-            );
-            logger.info(
-              "Cached getcompetitions result: competitions=" +
-                compsResult.data.length,
-            );
-            res.json({
-              status: "OK",
-              hash: Date.now().toString(),
-              data: compsResult.data,
-            });
-          } else {
-            res.status(500).json({ error: "Failed to fetch competitions" });
-          }
-          break;
-        }
-
-        case "getclasses": {
-          if (!compId) {
-            res.status(400).json({ error: "Missing 'comp' parameter" });
-            return;
-          }
-
-          const cacheKey = getCacheKey({ method, comp: compId });
-          const cached = await getCachedData(cacheKey, CACHE_TTL.CLASSES);
-
-          if (cached && lastHash && cached.hash === lastHash) {
-            logger.info(
-              "Cache HIT (NOT MODIFIED) for getclasses: comp=" + compId,
-            );
-            res.json({ status: "NOT MODIFIED", hash: cached.hash });
-            return;
-          }
-
-          if (cached) {
-            logger.info("Cache HIT for getclasses: comp=" + compId);
-            res.json({
-              status: "OK",
-              hash: cached.hash,
-              data: cached.data,
-            });
-            return;
-          }
-
-          logger.info(
-            "Cache MISS for getclasses: comp=" +
-              compId +
-              " - fetching fresh data",
-          );
-          const classesResult = await fetchClasses(compId, lastHash);
-          if (
-            classesResult.status === "OK" &&
-            classesResult.data &&
-            classesResult.hash
-          ) {
-            await setCachedData(
-              cacheKey,
-              classesResult.hash,
-              classesResult.data,
-            );
-            logger.info(
-              "Cached getclasses result: comp=" +
-                compId +
-                ", classes=" +
-                classesResult.data.length,
-            );
-            res.json(classesResult);
-          } else if (classesResult.status === "NOT MODIFIED") {
-            res.json(classesResult);
-          } else {
-            res.status(500).json({ error: "Failed to fetch classes" });
-          }
-          break;
-        }
-
         case "getclassresults": {
           if (!compId || !className) {
             res
