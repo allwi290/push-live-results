@@ -1,3 +1,4 @@
+import JSON5 from 'json5'
 import type {
   Competition,
   LastPassing,
@@ -89,6 +90,20 @@ cacheCleanup()
 
 // --- Fetch helpers ---
 
+/**
+ * Sanitize byte array by replacing control characters.
+ * Mirrors the backend sanitization in liveResultsClient.ts.
+ */
+function sanitizeControlCharacters(uint8Array: Uint8Array): void {
+  for (let i = 0; i < uint8Array.length; i++) {
+    const byte = uint8Array[i]
+    // Replace control chars 0x00-0x1F except HT(0x09), LF(0x0A), CR(0x0D)
+    if (byte < 0x20 && byte !== 0x09 && byte !== 0x0a && byte !== 0x0d) {
+      uint8Array[i] = 0x20
+    }
+  }
+}
+
 /** Fetch directly from the LiveResults API (used for navigation endpoints) */
 async function fetchLiveResultsApi<T>(params: URLSearchParams): Promise<T> {
   const url = `${LIVE_RESULTS_API}?${params.toString()}`
@@ -96,7 +111,11 @@ async function fetchLiveResultsApi<T>(params: URLSearchParams): Promise<T> {
   if (!res.ok) {
     throw new Error(`LiveResults request failed: ${res.status}`)
   }
-  return (await res.json()) as T
+  const arrayBuffer = await res.arrayBuffer()
+  const uint8Array = new Uint8Array(arrayBuffer)
+  sanitizeControlCharacters(uint8Array)
+  const text = new TextDecoder('utf-8', { fatal: false }).decode(uint8Array)
+  return JSON5.parse(text) as T
 }
 
 /** Fetch from our backend API (used for endpoints needing server-side logic) */
