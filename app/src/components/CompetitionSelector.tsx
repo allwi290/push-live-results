@@ -98,10 +98,12 @@ export function CompetitionSelector({
             }
             onChange={onClubNameChange}
             disabled={!competitionId}
-            options={clubs.map((club) => ({
-              value: club.name,
-              label: `${club.name} (${club.runners})`,
-            }))}
+            options={[...clubs]
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map((club) => ({
+                value: club.name,
+                label: `${club.name} (${club.runners})`,
+              }))}
           />
         )}
       </div>
