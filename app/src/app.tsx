@@ -54,9 +54,10 @@ export function App() {
     return saved === 'club' ? 'club' : 'class'
   })
   const [followed, setFollowed] = useState<string[]>([])
-  const [sortField, setSortField] = useState<'name' | 'secondary'>(() => {
+  const [sortField, setSortField] = useState<'name' | 'secondary' | 'startTime'>(() => {
     const saved = localStorage.getItem('sortField')
-    return saved === 'secondary' ? 'secondary' : 'name'
+    if (saved === 'secondary' || saved === 'startTime') return saved
+    return 'name'
   })
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(() => {
     const saved = localStorage.getItem('sortDirection')

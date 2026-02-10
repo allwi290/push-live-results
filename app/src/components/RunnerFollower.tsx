@@ -10,13 +10,13 @@ type RunnerFollowerProps = {
   results: ResultEntry[]
   loadingResults: boolean
   followed: string[]
-  sortField: 'name' | 'secondary'
+  sortField: 'name' | 'secondary' | 'startTime'
   sortDirection: 'asc' | 'desc'
   selectionMode: 'class' | 'club'
   user: { uid: string } | null
   status: Status
   onToggleRunner: (runnerName: string) => void
-  onSortFieldChange: (field: 'name' | 'secondary') => void
+  onSortFieldChange: (field: 'name' | 'secondary' | 'startTime') => void
   onSortDirectionToggle: () => void
 }
 
@@ -40,7 +40,7 @@ export function RunnerFollower({
   onSortFieldChange,
   onSortDirectionToggle,
 }: RunnerFollowerProps) {
-  const handleSortClick = (field: 'name' | 'secondary') => {
+  const handleSortClick = (field: 'name' | 'secondary' | 'startTime') => {
     if (sortField === field) {
       onSortDirectionToggle()
     } else {
@@ -80,6 +80,18 @@ export function RunnerFollower({
           {selectionMode === 'class' ? 'Club' : 'Class'}{' '}
           {sortField === 'secondary' && (sortDirection === 'asc' ? '↑' : '↓')}
         </button>
+        <button
+          class={`${buttonBase} flex-1 text-xs py-2 ${
+            sortField === 'startTime'
+              ? 'bg-emerald-100 text-emerald-700'
+              : 'bg-slate-100 text-slate-700'
+          }`}
+          onClick={() => handleSortClick('startTime')}
+          disabled={!results.length || loadingResults}
+        >
+          Start{' '}
+          {sortField === 'startTime' && (sortDirection === 'asc' ? '↑' : '↓')}
+        </button>
       </div>
       <div class="mt-3 grid gap-2">
         {loadingResults && (
@@ -97,6 +109,11 @@ export function RunnerFollower({
                 return sortDirection === 'asc'
                   ? a.name.localeCompare(b.name)
                   : b.name.localeCompare(a.name)
+              } else if (sortField === 'startTime') {
+                const startA = a.start ?? Number.MAX_SAFE_INTEGER
+                const startB = b.start ?? Number.MAX_SAFE_INTEGER
+                const compare = sortDirection === 'asc' ? startA - startB : startB - startA
+                return compare !== 0 ? compare : a.name.localeCompare(b.name)
               } else {
                 const fieldA =
                   selectionMode === 'class' ? a.club || '' : a.className || ''
