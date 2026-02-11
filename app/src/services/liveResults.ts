@@ -30,6 +30,7 @@ const CACHE_PREFIX = 'lr_cache_'
 const CACHE_TTL = {
   COMPETITIONS: 15 * 60 * 1000, // 15 minutes
   CLASSES: 10 * 60 * 1000,      // 10 minutes
+  CLASS_RESULTS: 60 * 1000,      // 1 minute (uses hash for freshness)
   CLUBS: 10 * 60 * 1000,         // 10 minutes
   CLUB_RESULTS: 60 * 1000,       // 1 minute (uses hash for freshness)
 }
@@ -258,8 +259,10 @@ export async function fetchClasses(
 export async function fetchClassResults(
   compId: number,
   className: string,
-  lastHash?: string,
 ): Promise<{ results: ResultEntry[]; hash?: string }> {
+  const cacheKey = `classresults_${compId}_${className}`
+  const cached = cacheGetEntry<ResultEntry[]>(cacheKey, CACHE_TTL.CLASS_RESULTS)
+
   try {
     const params = new URLSearchParams({
       method: 'getclassresults',
@@ -267,18 +270,27 @@ export async function fetchClassResults(
       class: className,
       unformattedTimes: 'false',
     })
-    if (lastHash) {
-      params.append('last_hash', lastHash)
+    if (cached?.hash) {
+      params.append('last_hash', cached.hash)
     }
-    const response = await fetchJson<{
-      data: ResultEntry[]
+
+    const data = await fetchLiveResultsApi<{
+      status?: string
+      results?: ResultEntry[]
       hash?: string
     }>(params)
-    return { results: response.data, hash: response.hash }
-  } catch (error) {
-    if (error instanceof Error && error.message === 'NOT_MODIFIED') {
-      throw error
+
+    if (data.status === 'NOT MODIFIED' && cached) {
+      // Refresh cache timestamp
+      cacheSet(cacheKey, cached.data, cached.hash)
+      return { results: cached.data, hash: cached.hash }
     }
+
+    const results = data.results || []
+    cacheSet(cacheKey, results, data.hash)
+    return { results, hash: data.hash }
+  } catch (error) {
+    if (cached) return { results: cached.data, hash: cached.hash }
     console.warn('Using fallback results', error)
     return { results: fallback.results }
   }
