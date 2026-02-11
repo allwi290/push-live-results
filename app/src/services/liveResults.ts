@@ -23,12 +23,15 @@ type ApiResponse<T> = {
 interface CacheEntry<T> {
   data: T
   timestamp: number
+  hash?: string
 }
 
 const CACHE_PREFIX = 'lr_cache_'
 const CACHE_TTL = {
   COMPETITIONS: 15 * 60 * 1000, // 15 minutes
   CLASSES: 10 * 60 * 1000,      // 10 minutes
+  CLUBS: 10 * 60 * 1000,         // 10 minutes
+  CLUB_RESULTS: 60 * 1000,       // 1 minute (uses hash for freshness)
 }
 // Max age before an entry is eligible for cleanup
 const CACHE_MAX_AGE = 24 * 60 * 60 * 1000 // 24 hours
@@ -48,19 +51,34 @@ function cacheGet<T>(key: string, ttlMs: number): T | null {
   }
 }
 
-function cacheSet<T>(key: string, data: T): void {
+function cacheSet<T>(key: string, data: T, hash?: string): void {
   try {
-    const entry: CacheEntry<T> = { data, timestamp: Date.now() }
+    const entry: CacheEntry<T> = { data, timestamp: Date.now(), hash }
     localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(entry))
   } catch {
     // Storage full — run cleanup and retry once
     cacheCleanup()
     try {
-      const entry: CacheEntry<T> = { data, timestamp: Date.now() }
+      const entry: CacheEntry<T> = { data, timestamp: Date.now(), hash }
       localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(entry))
     } catch {
       // Still full, give up silently
     }
+  }
+}
+
+function cacheGetEntry<T>(key: string, ttlMs: number): { data: T; hash?: string } | null {
+  try {
+    const raw = localStorage.getItem(CACHE_PREFIX + key)
+    if (!raw) return null
+    const entry: CacheEntry<T> = JSON.parse(raw)
+    if (Date.now() - entry.timestamp > ttlMs) {
+      localStorage.removeItem(CACHE_PREFIX + key)
+      return null
+    }
+    return { data: entry.data, hash: entry.hash }
+  } catch {
+    return null
   }
 }
 
@@ -289,13 +307,44 @@ export async function fetchLastPassings(
   }
 }
 export async function fetchClubs(compId: number): Promise<Club[]> {
+  const cacheKey = `clubs_${compId}`
+  const cached = cacheGet<Club[]>(cacheKey, CACHE_TTL.CLUBS)
+  if (cached) return cached
+
   try {
-    const params = new URLSearchParams({
-      method: 'getclubs',
-      comp: compId.toString(),
-    })
-    const response = await fetchJson<{ data: Club[] }>(params)
-    return response.data
+    // Fetch all classes, then aggregate clubs from all class results
+    const classes = await fetchClasses(compId)
+
+    const allResultsArrays = await Promise.all(
+      classes.map(async (raceClass) => {
+        try {
+          const params = new URLSearchParams({
+            method: 'getclassresults',
+            comp: compId.toString(),
+            class: raceClass.className,
+          })
+          const data = await fetchLiveResultsApi<{ results?: Array<{ club?: string }> }>(params)
+          return data.results || []
+        } catch {
+          return []
+        }
+      }),
+    )
+
+    const clubMap = new Map<string, number>()
+    for (const results of allResultsArrays) {
+      for (const entry of results) {
+        if (entry.club) {
+          clubMap.set(entry.club, (clubMap.get(entry.club) || 0) + 1)
+        }
+      }
+    }
+
+    const clubs = Array.from(clubMap, ([name, runners]) => ({ name, runners }))
+      .sort((a, b) => b.runners - a.runners)
+
+    cacheSet(cacheKey, clubs)
+    return clubs
   } catch (error) {
     console.warn('Failed to fetch clubs', error)
     return []
@@ -306,15 +355,59 @@ export async function fetchRunnersForClub(
   compId: number,
   clubName: string,
 ): Promise<ResultEntry[]> {
+  const cacheKey = `clubresults_${compId}_${clubName}`
+  const cached = cacheGetEntry<ResultEntry[]>(cacheKey, CACHE_TTL.CLUB_RESULTS)
+
   try {
     const params = new URLSearchParams({
-      method: 'getrunnersforclub',
+      method: 'getclubresults',
       comp: compId.toString(),
       club: clubName,
+      unformattedTimes: 'false',
     })
-    const response = await fetchJson<{ data: ResultEntry[] }>(params)
-    return response.data
+    if (cached?.hash) {
+      params.append('last_hash', cached.hash)
+    }
+
+    const data = await fetchLiveResultsApi<{
+      status?: string
+      results?: Array<{
+        place: string
+        name: string
+        club: string
+        class: string
+        result: string
+        status: number
+        timeplus: string
+        progress?: number
+        start: number
+      }>
+      hash?: string
+    }>(params)
+
+    if (data.status === 'NOT MODIFIED' && cached) {
+      // Refresh cache timestamp
+      cacheSet(cacheKey, cached.data, cached.hash)
+      return cached.data
+    }
+
+    // Map 'class' to 'className' for consistency with ResultEntry
+    const results: ResultEntry[] = (data.results || []).map((r) => ({
+      place: r.place,
+      name: r.name,
+      club: r.club,
+      className: r.class,
+      result: r.result,
+      status: r.status,
+      timeplus: r.timeplus,
+      progress: r.progress ?? (r.status === 0 ? 100 : 0),
+      start: r.start,
+    }))
+
+    cacheSet(cacheKey, results, data.hash)
+    return results
   } catch (error) {
+    if (cached) return cached.data
     console.warn('Failed to fetch runners for club', error)
     return []
   }

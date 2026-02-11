@@ -14,8 +14,7 @@ export const CACHE_TTL = {
   CLASSES: 15 * 60 * 1000, // 15 minutes
   CLASS_RESULTS: 15 * 60 * 1000, // 15 minutes
   LAST_PASSINGS: 2 * 60 * 1000, // 2 minutes
-  CLUBS: 15 * 60 * 1000, // 15 minutes
-  CLUB_RUNNERS: 15 * 60 * 1000, // 15 minutes
+
 };
 
 /**
