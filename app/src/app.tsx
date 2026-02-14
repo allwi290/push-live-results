@@ -13,6 +13,7 @@ import {
   signOutUser,
   checkForEmailLink,
   completeEmailLinkSignIn,
+  listenToForegroundMessages,
 } from './services/firebase'
 import { addSelection, removeSelection, loadSelections } from './services/selections'
 import { AuthModal } from './components/AuthModal'
@@ -23,6 +24,7 @@ import { Profile } from './components/Profile'
 import type { Club, Competition, RaceClass, ResultEntry } from './types/live-results'
 
 type Status = { kind: 'idle' | 'info' | 'error' | 'success'; message: string }
+type ForegroundNotice = { title: string; body: string; runnerName?: string }
 
 const buttonBase =
   'rounded-lg px-4 py-3 text-sm font-semibold shadow-sm transition active:scale-[0.99]'
@@ -63,6 +65,14 @@ export function App() {
     const saved = localStorage.getItem('sortDirection')
     return saved === 'desc' ? 'desc' : 'asc'
   })
+  const [focusedRunnerName, setFocusedRunnerName] = useState<string>('')
+  const [focusTrigger, setFocusTrigger] = useState(0)
+  const [foregroundNotice, setForegroundNotice] = useState<ForegroundNotice | null>(null)
+
+  const focusRunner = (runnerName: string) => {
+    setFocusedRunnerName(runnerName)
+    setFocusTrigger((prev) => prev + 1)
+  }
 
   // Handle email link sign-in on mount
   useEffect(() => {
@@ -82,12 +92,77 @@ export function App() {
     }
   }, [])
 
+  // Handle deep-link navigation from push notification click
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const competitionIdParam = params.get('competitionId')
+    const classNameParam = params.get('className')
+    const runnerNameParam = params.get('runnerName')
+
+    const parsedCompetitionId = competitionIdParam ? Number(competitionIdParam) : NaN
+    if (!Number.isNaN(parsedCompetitionId)) {
+      setCompetitionId(parsedCompetitionId)
+    }
+
+    if (classNameParam) {
+      setSelectionMode('class')
+      setClubName('')
+      setClassName(classNameParam)
+    }
+
+    if (runnerNameParam) {
+      focusRunner(runnerNameParam)
+    }
+
+    if (competitionIdParam || classNameParam || runnerNameParam) {
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+  }, [])
+
   // Auth listener
   useEffect(() => {
     const unsub = listenToAuthChanges((next) => {
       setUser(next)
     })
     return () => unsub()
+  }, [])
+
+  // Handle foreground push messages while app is open
+  useEffect(() => {
+    const unsubscribe = listenToForegroundMessages((payload) => {
+      const data = payload.data ?? {}
+      const competitionIdParam = data.competitionId
+      const classNameParam = data.className
+      const runnerNameParam = data.runnerName
+
+      const parsedCompetitionId = competitionIdParam ? Number(competitionIdParam) : NaN
+      if (!Number.isNaN(parsedCompetitionId)) {
+        setCompetitionId(parsedCompetitionId)
+      }
+
+      if (classNameParam) {
+        setSelectionMode('class')
+        setClubName('')
+        setClassName(classNameParam)
+      }
+
+      if (runnerNameParam) {
+        focusRunner(runnerNameParam)
+      }
+
+      setForegroundNotice({
+        title: payload.notification?.title || 'Live results update',
+        body: payload.notification?.body || 'A followed runner has a new update.',
+        runnerName: runnerNameParam,
+      })
+      setTimeout(() => {
+        setForegroundNotice(null)
+      }, 6000)
+    })
+
+    return () => {
+      unsubscribe()
+    }
   }, [])
 
   // Load competitions once
@@ -299,6 +374,21 @@ export function App() {
 
   return (
     <div class="mx-auto max-w-screen-sm px-4 py-6 text-slate-900">
+      {foregroundNotice && (
+        <button
+          type="button"
+          class="mb-4 w-full rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-left text-sm text-emerald-900 shadow-sm"
+          onClick={() => {
+            if (foregroundNotice.runnerName) {
+              focusRunner(foregroundNotice.runnerName)
+            }
+          }}
+        >
+          <p class="font-semibold">{foregroundNotice.title}</p>
+          <p class="text-xs text-emerald-700">{foregroundNotice.body}</p>
+        </button>
+      )}
+
       <header class="mb-6 flex items-center justify-between gap-3">
         <div>
           <p class="text-xs uppercase tracking-[0.2em] text-slate-500">
@@ -355,7 +445,11 @@ export function App() {
         onSortDirectionToggle={() => setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
       />
 
-      <LiveResultsDisplay results={results} />
+      <LiveResultsDisplay
+        results={results}
+        focusedRunnerName={focusedRunnerName}
+        focusTrigger={focusTrigger}
+      />
 
       {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
       

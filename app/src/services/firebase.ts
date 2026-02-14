@@ -13,8 +13,14 @@ import {
   signInWithEmailLink,
 } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
-import { getMessaging, getToken, isSupported } from 'firebase/messaging'
+import {
+  getMessaging,
+  getToken,
+  isSupported,
+  onMessage,
+} from 'firebase/messaging'
 import type { GetTokenOptions } from 'firebase/messaging'
+import type { MessagePayload } from 'firebase/messaging'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -161,5 +167,26 @@ export async function getCurrentFCMToken(): Promise<string | null> {
   } catch (error) {
     console.warn('Could not get FCM token:', error)
     return null
+  }
+}
+
+export function listenToForegroundMessages(
+  callback: (payload: MessagePayload) => void,
+): () => void {
+  let unsubscribe: (() => void) | null = null
+
+  messagingPromise
+    .then((messaging) => {
+      if (!messaging) return
+      unsubscribe = onMessage(messaging, callback)
+    })
+    .catch((error) => {
+      console.warn('Could not subscribe to foreground messages:', error)
+    })
+
+  return () => {
+    if (unsubscribe) {
+      unsubscribe()
+    }
   }
 }

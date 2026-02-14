@@ -1,13 +1,34 @@
+import { useEffect } from 'preact/hooks'
 import { getStatusText } from '../utils/statusUtils'
 import type { ResultEntry } from '../types/live-results'
 
 type LiveResultsDisplayProps = {
   results: ResultEntry[]
+  focusedRunnerName?: string
+  focusTrigger?: number
 }
 
-export function LiveResultsDisplay({ results }: LiveResultsDisplayProps) {
+export function LiveResultsDisplay({
+  results,
+  focusedRunnerName,
+  focusTrigger,
+}: LiveResultsDisplayProps) {
+  useEffect(() => {
+    if (!focusedRunnerName || results.length === 0) return
+
+    const sectionElement = document.getElementById('live-results-section')
+    sectionElement?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+
+    const targetRunnerName = focusedRunnerName.trim().toLowerCase()
+    const focusedElement = document.querySelector<HTMLElement>(
+      `[data-runner-name="${CSS.escape(targetRunnerName)}"]`
+    )
+
+    focusedElement?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [focusedRunnerName, focusTrigger, results])
+
   return (
-    <section class="rounded-2xl bg-white p-4 shadow-sm">
+    <section id="live-results-section" class="rounded-2xl bg-white p-4 shadow-sm">
       <div class="flex items-center justify-between">
         <h2 class="text-lg font-semibold">Live results</h2>
         <span class="text-xs text-slate-500">Updated as data arrives</span>
@@ -20,10 +41,18 @@ export function LiveResultsDisplay({ results }: LiveResultsDisplayProps) {
             const statusText = getStatusText(result.status)
             const isOK = result.status === 0
             const inProgress = result.progress < 100
+            const isFocused =
+              focusedRunnerName?.trim().toLowerCase() ===
+              result.name.trim().toLowerCase()
             return (
               <article
                 key={result.name}
-                class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3"
+                data-runner-name={result.name.trim().toLowerCase()}
+                class={`rounded-xl border px-3 py-3 ${
+                  isFocused
+                    ? 'border-emerald-400 bg-emerald-50 ring-2 ring-emerald-200'
+                    : 'border-slate-200 bg-slate-50'
+                }`}
               >
                 <div class="flex items-center justify-between text-sm">
                   <div>
