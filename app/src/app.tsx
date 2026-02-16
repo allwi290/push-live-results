@@ -221,7 +221,7 @@ export function App() {
     fetchClubs(competitionId).then(setClubs).catch(console.error)
   }, [competitionId])
 
-  // Pull results when class or club changes
+  // Pull results when class or club changes, then poll every 30 s
   useEffect(() => {
     if (!competitionId) {
       setResults([])
@@ -229,46 +229,49 @@ export function App() {
       return
     }
 
-    if (selectionMode === 'class') {
-      if (!className) {
-        setResults([])
-        setLoadingResults(false)
-        return
+    const doFetch = (showLoading: boolean) => {
+      if (selectionMode === 'class') {
+        if (!className) {
+          setResults([])
+          setLoadingResults(false)
+          return
+        }
+        if (showLoading) setLoadingResults(true)
+        fetchClassResults(competitionId, className)
+          .then(({ results }) => {
+            const resultsWithClass = results.map(r => ({
+              ...r,
+              className: r.className || className
+            }))
+            setResults(resultsWithClass)
+            setLoadingResults(false)
+          })
+          .catch((err) => {
+            console.error(err)
+            setLoadingResults(false)
+          })
+      } else {
+        if (!clubName || !classes.length) {
+          setResults([])
+          setLoadingResults(false)
+          return
+        }
+        if (showLoading) setLoadingResults(true)
+        fetchRunnersForClub(competitionId, clubName)
+          .then((res) => {
+            setResults(res)
+            setLoadingResults(false)
+          })
+          .catch((err) => {
+            console.error(err)
+            setLoadingResults(false)
+          })
       }
-      setLoadingResults(true)
-      fetchClassResults(competitionId, className)
-        .then(({ results }) => {
-          // Ensure className is set on all results (for storage consistency)
-          const resultsWithClass = results.map(r => ({
-            ...r,
-            className: r.className || className
-          }))
-          setResults(resultsWithClass)
-          setLoadingResults(false)
-        })
-        .catch((err) => {
-          console.error(err)
-          setLoadingResults(false)
-        })
-    } else {
-      if (!clubName || !classes.length) {
-        setResults([])
-        setLoadingResults(false)
-        return
-      }
-
-      setLoadingResults(true)
-      // Use the new API endpoint to fetch all club runners
-      fetchRunnersForClub(competitionId, clubName)
-        .then((res) => {
-          setResults(res)
-          setLoadingResults(false)
-        })
-        .catch((err) => {
-          console.error(err)
-          setLoadingResults(false)
-        })
     }
+
+    doFetch(true)
+    const interval = setInterval(() => doFetch(false), 30_000)
+    return () => clearInterval(interval)
   }, [competitionId, className, clubName, selectionMode, classes])
 
   // Load saved selections when results or user changes
@@ -447,6 +450,8 @@ export function App() {
 
       <LiveResultsDisplay
         results={results}
+        competitionDate={competitions.find(c => c.id === competitionId)?.date}
+        competitionTimediff={competitions.find(c => c.id === competitionId)?.timediff}
         focusedRunnerName={focusedRunnerName}
         focusTrigger={focusTrigger}
       />
