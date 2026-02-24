@@ -69,6 +69,14 @@ export function App() {
   const [focusTrigger, setFocusTrigger] = useState(0)
   const [foregroundNotice, setForegroundNotice] = useState<ForegroundNotice | null>(null)
 
+  const handleCompetitionChange = (id: number | null) => {
+    setCompetitionId(id)
+    setClassName('')
+    setClubName('')
+    setResults([])
+    setLoadingResults(false)
+  }
+
   const focusRunner = (runnerName: string) => {
     setFocusedRunnerName(runnerName)
     setFocusTrigger((prev) => prev + 1)
@@ -428,7 +436,7 @@ export function App() {
         className={className}
         clubName={clubName}
         selectionMode={selectionMode}
-        onCompetitionChange={setCompetitionId}
+        onCompetitionChange={handleCompetitionChange}
         onClassNameChange={setClassName}
         onClubNameChange={setClubName}
         onSelectionModeChange={setSelectionMode}
