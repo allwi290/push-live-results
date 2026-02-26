@@ -8,10 +8,7 @@ import { setGlobalOptions } from "firebase-functions";
 import { onRequest } from "firebase-functions/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import * as logger from "firebase-functions/logger";
-import {
-  fetchClassResultsFull,
-  fetchLastPassings,
-} from "./liveResultsClient";
+import { fetchClassResultsFull, fetchLastPassings } from "./liveResultsClient";
 import {
   getCachedData,
   setCachedData,
@@ -19,10 +16,7 @@ import {
   cleanOldCache,
   CACHE_TTL,
 } from "./cache";
-import {
-  notifyResultChanges,
-  cleanOldSelections,
-} from "./notifications";
+import { notifyResultChanges, cleanOldSelections } from "./notifications";
 import type { ResultEntry } from "./types";
 
 // Initialize Firebase Admin
@@ -152,10 +146,20 @@ export const pollActiveSelections = onSchedule(
     logger.info("Starting active selections polling");
 
     try {
+      // At each poll, look for selections whose startTime is within a sliding window
+      // from 180 minutes before "now" to 30 minutes after "now".
+      //
+      // For a runner with startTime S, this means their selection will match the query
+      // on every poll where "now" is between S - 30 minutes and S + 180 minutes:
+      //   S - 30 min <= now <= S + 180 min  ⇔  now - 180 min <= S <= now + 30 min
+      //
+      // In other words, we effectively follow each runner from 30 minutes before their
+      // scheduled start time until 180 minutes after, while the code always queries
+      // in terms of a window around the current server time.
       const db = getFirestore();
       const now = new Date();
-      const windowStart = now.getTime() - 30 * 60 * 1000; // 30 minutes ago (timestamp in ms)
-      const windowEnd = now.getTime() + 180 * 60 * 1000; // 180 minutes from now (timestamp in ms)
+      const windowStart = now.getTime() - 180 * 60 * 1000; // 180 minutes ago (timestamp in ms)
+      const windowEnd = now.getTime() + 30 * 60 * 1000; // 30 minutes from now (timestamp in ms)
 
       // Get selections where startTime is within the window (numeric timestamp)
       const query = db
