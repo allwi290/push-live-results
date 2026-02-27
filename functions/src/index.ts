@@ -157,9 +157,9 @@ export const pollActiveSelections = onSchedule(
       // scheduled start time until 180 minutes after, while the code always queries
       // in terms of a window around the current server time.
       const db = getFirestore();
-      const now = new Date();
-      const windowStart = now.getTime() - 180 * 60 * 1000; // 180 minutes ago (timestamp in ms)
-      const windowEnd = now.getTime() + 30 * 60 * 1000; // 30 minutes from now (timestamp in ms)
+      const now = Date.now();
+      const windowStart = now - 180 * 60 * 1000; // 180 minutes ago (timestamp in ms)
+      const windowEnd = now + 30 * 60 * 1000; // 30 minutes from now (timestamp in ms)
 
       // Get selections where startTime is within the window (numeric timestamp)
       const query = db
