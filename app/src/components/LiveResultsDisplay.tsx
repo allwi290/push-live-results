@@ -60,15 +60,23 @@ export function LiveResultsDisplay({
     focusedElement?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }, [focusedRunnerName, focusTrigger, results])
 
-  // In-forest: status 9, or status 10 whose start time has already passed
+  // In-forest: status 9 or 10 whose start time has already passed
   const inForest = results
-    .filter((r) => {
-      if (r.status === 9) return true
-      if (r.status === 10 && hasStarted(competitionDate, r.start, competitionTimediff))
-        return true
-      return false
-    })
+    .filter(
+      (r) =>
+        (r.status === 9 || r.status === 10) &&
+        hasStarted(competitionDate, r.start, competitionTimediff),
+    )
     .sort((a, b) => b.progress - a.progress || a.start - b.start)
+
+  // Waiting to start: status 9 or 10 whose start time has NOT passed yet
+  const waiting = results
+    .filter(
+      (r) =>
+        (r.status === 9 || r.status === 10) &&
+        !hasStarted(competitionDate, r.start, competitionTimediff),
+    )
+    .sort((a, b) => a.start - b.start)
 
   // Finished / error statuses (everything except 9/10)
   const finished = results
@@ -144,8 +152,44 @@ export function LiveResultsDisplay({
           )
         })}
 
+        {/* ---------- Waiting to start ---------- */}
+        {waiting.length > 0 && (
+          <h3 class="pt-2 text-xs font-medium uppercase tracking-wider text-amber-700">
+            Waiting to start ({waiting.length})
+          </h3>
+        )}
+        {waiting.map((result) => {
+          const isFocused =
+            focusedRunnerName?.trim().toLowerCase() ===
+            result.name.trim().toLowerCase()
+          return (
+            <article
+              key={result.name}
+              data-runner-name={result.name.trim().toLowerCase()}
+              class={`rounded-xl border px-3 py-3 ${
+                isFocused
+                  ? 'border-amber-400 bg-amber-50 ring-2 ring-amber-200'
+                  : 'border-amber-100 bg-amber-50/50'
+              }`}
+            >
+              <div class="flex items-center justify-between text-sm">
+                <div>
+                  <p class="font-semibold">{result.name}</p>
+                  <p class="text-xs text-slate-500">{result.club || '—'}</p>
+                  {result.className && (
+                    <p class="text-xs text-slate-400">{result.className}</p>
+                  )}
+                </div>
+                <div class="text-right text-xs text-amber-600">
+                  <p>Not started yet</p>
+                </div>
+              </div>
+            </article>
+          )
+        })}
+
         {/* ---------- Finished / error runners ---------- */}
-        {finished.length > 0 && inForest.length > 0 && (
+        {finished.length > 0 && (inForest.length > 0 || waiting.length > 0) && (
           <h3 class="pt-2 text-xs font-medium uppercase tracking-wider text-slate-500">
             Finished ({finished.length})
           </h3>
