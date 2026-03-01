@@ -1,10 +1,14 @@
 {
     "cSpell.words": [
+        "centiseconds",
         "getclassresult",
         "getclubs",
         "getcompetitioninfo",
         "getcompetitions",
+        "Godefroy",
+        "multidaystage",
         "passtime",
+        "splitcontrols",
         "timediff"
     ],
     "chat.tools.terminal.autoApprove": {

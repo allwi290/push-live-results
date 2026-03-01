@@ -76,50 +76,67 @@ Example response:
 
 ``` json
 {
-   "status": "OK",
-   "className": "Gul h",
-   "splitcontrols": [],
-   "results": [
+  "timestamp": "2026-02-07T09:10:16.254Z",
+  "lastHashUsed": "cad387fa1259e1ab77ca2dbdf945b087",
+  "statusCode": 200,
+  "response": {
+    "status": "OK",
+    "className": "Herrar",
+    "splitcontrols": [
       {
-         "place": "1",
-         "name": "Anton Mörkfors",
-         "club": "Järfälla OK",
-         "result": "17:02",
-         "status": 0,
-         "timeplus": "+00:00",
-         "progress": 100,
-         "start": 6840000
+        "code": 1065,
+        "name": "Radio K65"
       },
       {
-         "place": "2",
-         "name": "Leif Mörkfors",
-         "club": "Järfälla OK",
-         "result": "18:23",
-         "status": 0,
-         "timeplus": "+01:21",
-         "progress": 100,
-         "start": 6840000
+        "code": 1050,
+        "name": "Radio K50"
       },
       {
-         "place": "3",
-         "name": "Martin Kvarnefalk",
-         "club": "Järfälla OK",
-         "result": "21:07",
-         "status": 0,
-         "timeplus": "+04:05",
-         "progress": 100,
-         "start": 6840000
+        "code": 1074,
+        "name": "Radio K74"
+      },
+      {
+        "code": 1090,
+        "name": "Radio K90"
+      }
+    ],
+    "results": [
+      {
+        "place": "",
+        "name": "Bruno Godefroy",
+        "club": "OK Ravinen",
+        "result": "",
+        "status": 9,
+        "timeplus": "+",
+        "progress": 60,
+        "splits": {
+          "1050": "",
+          "1065": 85900,
+          "1074": 226300,
+          "1090": "",
+          "1065_status": 0,
+          "1065_place": 13,
+          "1065_timeplus": 56300,
+          "1050_status": 1,
+          "1050_place": "",
+          "1074_status": 0,
+          "1074_place": 8,
+          "1074_timeplus": 114500,
+          "1090_status": 1,
+          "1090_place": ""
+        },
+        "start": 3426000,
+        "DT_RowClass": "new_result"
       }
    ],
    "hash": "883fae6e4b8f0727b6ffabb7c403277c"
 }
 ```
-#### getclassresults
 
 This is how getclassresults changes for a runner during a competition
 
 | Property | 10:02:55 | 14:25:33 | 14:27:40 | 14:32:57 | 14:35:03 | 14:44:01 | 14:46:07 | 14:48:45 | 14:50:52 | 15:10:22 | 15:11:57 | 15:14:04 |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | **status** | `10` | → `9` | | | | | | | | | → `0` | |
 | **progress** | `0` | | | → `20` | | → `40` | | → `60` | | → `80` | → `100` | |
 | **place** | `""` | | | | | | | | | | → `"1"` | |
@@ -144,6 +161,7 @@ This is how getclassresults changes for a runner during a competition
 | **1090_timeplus** | — | | | | | | | | | + `0` | | |
 
 **Key observations:**
+
 - The first update (10:02:55) is the **initial state** (not yet started, status=10).
 - At 14:25:33 status changes to `9` (started/running). The `DT_RowClass: "new_result"` flag toggles on/off in pairs — it marks "something changed" and is cleared on the next poll.
 - Splits arrive in order: **1065** → **1050** → **1074** → **1090**, each bumping progress by 20%.
