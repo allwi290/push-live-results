@@ -39,6 +39,39 @@ function hasStarted(
   return Date.now() >= getStartTimestamp(competitionDate, startCentiseconds, timediff)
 }
 
+/**
+ * Return a human-readable progress message based on radio control data.
+ */
+function getProgressMessage(
+  totalControls: number | undefined,
+  passedControls: number | undefined,
+): string {
+  const total = totalControls ?? 0
+  const passed = passedControls ?? 0
+
+  if (total === 0) {
+    return 'Started \u2014 waiting for finish'
+  }
+
+  if (total === 1) {
+    if (passed === 0) {
+      return 'Started \u2014 waiting for radio control'
+    }
+    return 'Passed radio control \u2014 waiting for finish'
+  }
+
+  // Multiple controls
+  if (passed === 0) {
+    return `Started \u2014 waiting for radio control 1 of ${total}`
+  }
+
+  if (passed >= total) {
+    return 'Passed all radio controls \u2014 waiting for finish'
+  }
+
+  return `Passed radio control ${passed} of ${total} \u2014 waiting for control ${passed + 1} of ${total}`
+}
+
 export function LiveResultsDisplay({
   results,
   competitionDate,
@@ -130,24 +163,12 @@ export function LiveResultsDisplay({
                   )}
                 </div>
               </div>
-              {result.progress > 0 ? (
-                <div class="mt-2">
-                  <div class="mb-1 flex items-center justify-between text-xs text-slate-500">
-                    <span>Progress</span>
-                    <span>{result.progress}%</span>
-                  </div>
-                  <div class="h-1.5 w-full rounded-full bg-slate-200">
-                    <div
-                      class="h-1.5 rounded-full bg-emerald-500 transition-all duration-500"
-                      style={{ width: `${result.progress}%` }}
-                    />
-                  </div>
-                </div>
-              ) : (
-                <p class="mt-1 text-xs text-emerald-600">
-                  Started — awaiting first radio
-                </p>
-              )}
+              <p class="mt-1 text-xs text-emerald-600">
+                {getProgressMessage(
+                  typeof result.totalControls === 'number' ? result.totalControls : undefined,
+                  typeof result.passedControls === 'number' ? result.passedControls : undefined
+                )}
+              </p>
             </article>
           )
         })}

@@ -276,7 +276,8 @@ export async function fetchClassResults(
 
     const data = await fetchLiveResultsApi<{
       status?: string
-      results?: ResultEntry[]
+      results?: Array<ResultEntry & { splits?: Record<string, unknown> }>
+      splitcontrols?: Array<{ code: number; name: string }>
       hash?: string
     }>(params)
 
@@ -286,7 +287,24 @@ export async function fetchClassResults(
       return { results: cached.data, hash: cached.hash }
     }
 
-    const results = data.results || []
+    const splitControls = data.splitcontrols || []
+    const totalControls = splitControls.length
+
+    const results: ResultEntry[] = (data.results || []).map((r) => {
+      const splits = r.splits || {}
+      const passedControls = splitControls.filter((sc) => {
+        const val = splits[sc.code.toString()]
+        return typeof val === 'number' && val > 0
+      }).length
+
+      const { splits: _splits, ...rest } = r
+      return {
+        ...rest,
+        totalControls,
+        passedControls,
+      }
+    })
+
     cacheSet(cacheKey, results, data.hash)
     return { results, hash: data.hash }
   } catch (error) {

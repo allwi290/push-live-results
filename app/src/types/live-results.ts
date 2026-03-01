@@ -34,6 +34,8 @@ export type ResultEntry = {
   progress: number
   start: number
   className?: string
+  totalControls?: number
+  passedControls?: number
 }
 
 export type LastPassing = {
