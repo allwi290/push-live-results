@@ -114,6 +114,41 @@ Example response:
    "hash": "883fae6e4b8f0727b6ffabb7c403277c"
 }
 ```
+#### getclassresults
+
+This is how getclassresults changes for a runner during a competion
+
+| Property | 10:02:55 | 14:25:33 | 14:27:40 | 14:32:57 | 14:35:03 | 14:44:01 | 14:46:07 | 14:48:45 | 14:50:52 | 15:10:22 | 15:11:57 | 15:14:04 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **status** | `10` | → `9` | | | | | | | | | → `0` | |
+| **progress** | `0` | | | → `20` | | → `40` | | → `60` | | → `80` | → `100` | |
+| **place** | `""` | | | | | | | | | | → `"1"` | |
+| **result** | `""` | | | | | | | | | | → `"43:18"` | |
+| **timeplus** | `"+"` | | | | | | | | | | → `"+00:00"` | |
+| **DT_RowClass** | — | + `new_result` | removed | + `new_result` | removed | + `new_result` | removed | + `new_result` | removed | + `new_result` | `new_result` | removed |
+| **1065** (split) | `""` | | | → `26900` | | | | | | | | |
+| **1065_status** | `1` | | | → `0` | | | | | | | | |
+| **1065_place** | `""` | | | → `2` | | | | | | | | |
+| **1065_timeplus** | — | | | + `1100` | | | | | | | | |
+| **1050** (split) | `""` | | | | | → `94800` | | | | | | |
+| **1050_status** | `1` | | | | | → `0` | | | | | | |
+| **1050_place** | `""` | | | | | → `18` | | | | | | |
+| **1050_timeplus** | — | | | | | + `29100` | | | | | | |
+| **1074** (split) | `""` | | | | | | | → `122700` | | | | |
+| **1074_status** | `1` | | | | | | | → `0` | | | | |
+| **1074_place** | `""` | | | | | | | → `8` | | | | |
+| **1074_timeplus** | — | | | | | | | + `17500` | | | | |
+| **1090** (split) | `""` | | | | | | | | | → `252700` | | |
+| **1090_status** | `1` | | | | | | | | | → `0` | | |
+| **1090_place** | `""` | | | | | | | | | → `1` | | |
+| **1090_timeplus** | — | | | | | | | | | + `0` | | |
+
+**Key observations:**
+- The first update (10:02:55) is the **initial state** (not yet started, status=10).
+- At 14:25:33 status changes to `9` (started/running). The `DT_RowClass: "new_result"` flag toggles on/off in pairs — it marks "something changed" and is cleared on the next poll.
+- Splits arrive in order: **1065** → **1050** → **1074** → **1090**, each bumping progress by 20%.
+- At 15:11:57 the runner **finishes**: status → `0`, result `"43:18"`, place `"1"`, timeplus `"+00:00"` — **1st place**.
+- Unchanged properties (`name`, `club`, `start`) are omitted from the table.
 
 ### Runner status
 
