@@ -116,7 +116,7 @@ Example response:
 ```
 #### getclassresults
 
-This is how getclassresults changes for a runner during a competion
+This is how getclassresults changes for a runner during a competition
 
 | Property | 10:02:55 | 14:25:33 | 14:27:40 | 14:32:57 | 14:35:03 | 14:44:01 | 14:46:07 | 14:48:45 | 14:50:52 | 15:10:22 | 15:11:57 | 15:14:04 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
