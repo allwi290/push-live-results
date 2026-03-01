@@ -42,6 +42,92 @@ Goal: Build a minimal, mobile-only web client for live orienteering push notific
 - **`timediff` property**: In responses from `getCompetitions` and `getCompetitionInfo`, the `timediff` property represents the number of hours that the competition's timezone is ahead (+) or behind (-) compared to Central European Time (CET).
 - **`start` property**: In responses from `getClassResults` and `getClubResults`, the `start` property represents the start time for the runner in hundreds of seconds since midnight.
 
+### getcompetitions
+
+Example response
+
+``` json
+{ 
+    "competitions" :
+    [
+        {
+            "id" : 10278, 
+            "name" : "Demo #1", 
+            "organizer" : "TestOrganizer", 
+            "date" : "2012-06-01",
+            "timediff" : 0
+        },
+        {
+            "id" : 10279, 
+            "name" : "Demo #2", 
+            "organizer" : "TestOrganizer", 
+            "date" : "2012-06-02",
+            "timediff" : 1,
+            "multidaystage" : 1,
+            "multidayfirstday" : 10278
+        }
+    ]
+}
+```
+
+### getclassresults
+
+Example response:
+
+``` json
+{
+   "status": "OK",
+   "className": "Gul h",
+   "splitcontrols": [],
+   "results": [
+      {
+         "place": "1",
+         "name": "Anton Mörkfors",
+         "club": "Järfälla OK",
+         "result": "17:02",
+         "status": 0,
+         "timeplus": "+00:00",
+         "progress": 100,
+         "start": 6840000
+      },
+      {
+         "place": "2",
+         "name": "Leif Mörkfors",
+         "club": "Järfälla OK",
+         "result": "18:23",
+         "status": 0,
+         "timeplus": "+01:21",
+         "progress": 100,
+         "start": 6840000
+      },
+      {
+         "place": "3",
+         "name": "Martin Kvarnefalk",
+         "club": "Järfälla OK",
+         "result": "21:07",
+         "status": 0,
+         "timeplus": "+04:05",
+         "progress": 100,
+         "start": 6840000
+      }
+   ],
+   "hash": "883fae6e4b8f0727b6ffabb7c403277c"
+}
+```
+
+### Runner status
+
+0 - OK
+1 - DNS (Did Not Start)
+2 - DNF (Did not finish)
+3 - MP (Missing Punch)
+4 - DSQ (Disqualified)
+5 - OT (Over (max) time)
+9 - Not Started Yet
+10 - Not Started Yet
+11 - Walk Over (Resigned before the race started)
+12 - Moved up (The runner have been moved to a higher class)
+
 ## Dev Notes
 
 - Environment via .env for Firebase keys; do not commit secrets.
