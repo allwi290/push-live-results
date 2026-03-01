@@ -17,12 +17,18 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// Handle background messages
+// Handle background messages.
+//
+// Messages arrive with a `notification` field (needed for iOS APNs) so the
+// Firebase SDK auto-displays a notification.  We call showNotification()
+// again with the **same tag** — the Notification API replaces the earlier
+// notification instead of creating a second one.  This way we get exactly
+// one notification AND our custom deep-link data is attached.
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] Received background message:', payload);
   
-  const notificationTitle = payload.notification?.title || 'Live Results Update';
   const notificationData = payload.data || {};
+  const notificationTitle = notificationData.title || payload.notification?.title || 'Live Results Update';
 
   const targetUrl = new URL('/', self.location.origin);
   if (notificationData.competitionId) {
@@ -35,9 +41,15 @@ messaging.onBackgroundMessage((payload) => {
     targetUrl.searchParams.set('runnerName', notificationData.runnerName);
   }
 
+  // Use the same tag the backend set in webpush.notification.tag so this
+  // showNotification() REPLACES the SDK's auto-displayed notification
+  // rather than creating a duplicate.
+  const tag = notificationData.notificationTag || undefined;
+
   const notificationOptions = {
-    body: payload.notification?.body || 'You have a new update',
+    body: notificationData.body || payload.notification?.body || 'You have a new update',
     icon: '/favicon.ico',
+    tag,
     data: {
       ...notificationData,
       url: targetUrl.toString(),

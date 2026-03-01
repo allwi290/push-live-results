@@ -135,7 +135,8 @@ export function App() {
     return () => unsub()
   }, [])
 
-  // Handle foreground push messages while app is open
+  // Handle foreground push messages while app is open.
+  // title/body are available in both payload.notification and payload.data.
   useEffect(() => {
     const unsubscribe = listenToForegroundMessages((payload) => {
       const data = payload.data ?? {}
@@ -159,8 +160,8 @@ export function App() {
       }
 
       setForegroundNotice({
-        title: payload.notification?.title || 'Live results update',
-        body: payload.notification?.body || 'A followed runner has a new update.',
+        title: data.title || payload.notification?.title || 'Live results update',
+        body: data.body || payload.notification?.body || 'A followed runner has a new update.',
         runnerName: runnerNameParam,
       })
       setTimeout(() => {

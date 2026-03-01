@@ -52,20 +52,49 @@ export async function sendPushNotification(
 ): Promise<void> {
   try {
     const messaging = getMessaging();
+
+    // Build a deterministic tag so the service-worker's onBackgroundMessage
+    // can call showNotification() with the SAME tag.  The Notification API
+    // replaces (rather than stacks) notifications that share a tag, which
+    // deduplicates the SDK's auto-display and our manual display.
+    const tag = payload.data?.runnerName
+      ? `plr-${payload.data.competitionId || ""}-${payload.data.className || ""}-${payload.data.runnerName}-${payload.data.control || payload.data.type || ""}`
+      : `plr-${Date.now()}`;
+
     await messaging.send({
       token: fcmToken,
+      // The `notification` field is required for reliable delivery on iOS
+      // Safari PWAs (APNs ignores data-only / silent pushes).
       notification: {
         title: payload.title,
         body: payload.body,
       },
-      data: payload.data,
+      data: {
+        ...payload.data,
+        // Duplicate title/body here so the foreground handler and the
+        // service worker can always read them from payload.data.
+        title: payload.title,
+        body: payload.body,
+        notificationTag: tag,
+      },
+      webpush: {
+        notification: {
+          // Same tag used by onBackgroundMessage → replacement, not duplicate
+          tag,
+          icon: "/favicon.ico",
+        },
+      },
       android: {
         priority: "high",
         notification: {
           sound: "default",
+          tag,
         },
       },
       apns: {
+        headers: {
+          "apns-collapse-id": tag,
+        },
         payload: {
           aps: {
             sound: "default",
