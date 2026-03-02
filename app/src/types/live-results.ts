@@ -34,6 +34,8 @@ export type ResultEntry = {
   progress: number
   start: number
   className?: string
+  splits?: Record<string, string | number>
+  splitControlNames?: Record<string, string>
   totalControls?: number
   passedControls?: number
 }

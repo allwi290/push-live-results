@@ -72,6 +72,56 @@ function getProgressMessage(
   return `Passed radio control ${passed} of ${total} \u2014 waiting for control ${passed + 1} of ${total}`
 }
 
+function getRecordedSplits(
+  splits: unknown,
+  splitControlNames?: unknown,
+): { controlCode: string; controlName: string; time: string; place?: string }[] {
+  if (!splits || typeof splits !== 'object') return []
+
+  const splitMap = splits as Record<string, string | number>
+  const nameMap =
+    splitControlNames && typeof splitControlNames === 'object'
+      ? (splitControlNames as Record<string, string>)
+      : undefined
+
+  const isRecordedTime = (value: string | number | undefined): boolean => {
+    if (typeof value === 'number') return value > 0
+    if (typeof value === 'string') {
+      const trimmed = value.trim()
+      return trimmed !== '' && trimmed !== '-' && trimmed !== '0'
+    }
+    return false
+  }
+
+  return Object.keys(splitMap)
+    .filter((key) => /^\d+$/.test(key))
+    .filter((key) => isRecordedTime(splitMap[key]))
+    .sort((a, b) => Number(a) - Number(b))
+    .map((key) => {
+      const rawPlace = splitMap[`${key}_place`]
+      const placeText = rawPlace !== undefined && rawPlace !== null ? String(rawPlace).trim() : ''
+
+      return {
+        controlCode: key,
+        controlName: nameMap?.[key] || key,
+        time: String(splitMap[key]),
+        place: placeText && placeText !== '-' ? placeText : undefined,
+      }
+    })
+}
+
+function formatRecordedSplits(
+  splits: { controlCode: string; controlName: string; time: string; place?: string }[],
+): string {
+  return splits
+    .map((split) =>
+      split.place
+        ? `${split.controlName}: ${split.time} (Pos ${split.place})`
+        : `${split.controlName}: ${split.time}`,
+    )
+    .join(' \u00b7 ')
+}
+
 export function LiveResultsDisplay({
   results,
   competitionDate,
@@ -133,6 +183,7 @@ export function LiveResultsDisplay({
           const isFocused =
             focusedRunnerName?.trim().toLowerCase() ===
             result.name.trim().toLowerCase()
+          const recordedSplits = getRecordedSplits(result.splits, result.splitControlNames)
           const startTs = competitionDate
             ? getStartTimestamp(competitionDate, result.start, competitionTimediff)
             : null
@@ -169,6 +220,11 @@ export function LiveResultsDisplay({
                   typeof result.passedControls === 'number' ? result.passedControls : undefined
                 )}
               </p>
+              {recordedSplits.length > 0 && (
+                <p class="mt-1 text-[11px] text-emerald-700">
+                  Splits: {formatRecordedSplits(recordedSplits)}
+                </p>
+              )}
             </article>
           )
         })}
@@ -219,6 +275,7 @@ export function LiveResultsDisplay({
           const statusText = getStatusText(result.status)
           const isOK = result.status === 0
           const inProgress = result.progress < 100
+          const recordedSplits = getRecordedSplits(result.splits, result.splitControlNames)
           const isFocused =
             focusedRunnerName?.trim().toLowerCase() ===
             result.name.trim().toLowerCase()
@@ -251,6 +308,11 @@ export function LiveResultsDisplay({
                   {inProgress && (
                     <p class="mt-1 text-[11px] text-slate-400">
                       Progress: {result.progress}%
+                    </p>
+                  )}
+                  {recordedSplits.length > 0 && (
+                    <p class="mt-1 text-[11px] text-slate-500">
+                      Splits: {formatRecordedSplits(recordedSplits)}
                     </p>
                   )}
                 </>

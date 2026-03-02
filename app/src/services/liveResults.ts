@@ -288,18 +288,27 @@ export async function fetchClassResults(
     }
 
     const splitControls = data.splitcontrols || []
+    const splitControlNames = Object.fromEntries(
+      splitControls.map((sc) => [sc.code.toString(), sc.name]),
+    )
     const totalControls = splitControls.length
 
     const results: ResultEntry[] = (data.results || []).map((r) => {
       const splits = r.splits || {}
       const passedControls = splitControls.filter((sc) => {
         const val = splits[sc.code.toString()]
-        return typeof val === 'number' && val > 0
+        if (typeof val === 'number') return val > 0
+        if (typeof val === 'string') {
+          const trimmed = val.trim()
+          return trimmed !== '' && trimmed !== '-' && trimmed !== '0'
+        }
+        return false
       }).length
 
-      const { splits: _splits, ...rest } = r
       return {
-        ...rest,
+        ...r,
+        splits,
+        splitControlNames,
         totalControls,
         passedControls,
       }
