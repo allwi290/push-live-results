@@ -83,6 +83,9 @@ export async function sendPushNotification(
           tag,
           icon: "/favicon.ico",
         },
+        fcmOptions: {
+            link: payload.data?.link
+          }
       },
       android: {
         priority: "high",
@@ -144,6 +147,10 @@ export async function notifyPassingChanges(
       if (followers.length === 0) {
         continue;
       }
+      const targetUrl = new URL("/", "https://push-live-results.web.app");
+      targetUrl.searchParams.set("competitionId", competitionId);
+      targetUrl.searchParams.set("className", passing.class);
+      targetUrl.searchParams.set("runnerName", passing.runnerName);
 
       // Create notification payload
       const payload: NotificationPayload = {
@@ -156,6 +163,7 @@ export async function notifyPassingChanges(
           control: passing.control.toString(),
           controlName: passing.controlName,
           passtime: passing.passtime,
+          link: targetUrl.toString(),
         },
       };
 
