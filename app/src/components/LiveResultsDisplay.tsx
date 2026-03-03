@@ -72,6 +72,20 @@ function getProgressMessage(
   return `Passed radio control ${passed} of ${total} \u2014 waiting for control ${passed + 1} of ${total}`
 }
 
+/**
+ * Format centiseconds (hundredths of a second) into mm:ss or h:mm:ss.
+ * E.g. 85900 → "14:19", 360000 → "1:00:00".
+ */
+function formatCentiseconds(cs: number): string {
+  const totalSeconds = Math.floor(cs / 100)
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+  const mm = String(minutes).padStart(2, '0')
+  const ss = String(seconds).padStart(2, '0')
+  return hours > 0 ? `${hours}:${mm}:${ss}` : `${minutes}:${ss}`
+}
+
 function getRecordedSplits(
   splits: unknown,
   splitControlNames?: unknown,
@@ -104,22 +118,39 @@ function getRecordedSplits(
       return {
         controlCode: key,
         controlName: nameMap?.[key] || key,
-        time: String(splitMap[key]),
+        time: typeof splitMap[key] === 'number'
+          ? formatCentiseconds(splitMap[key])
+          : String(splitMap[key]),
         place: placeText && placeText !== '-' ? placeText : undefined,
       }
     })
 }
 
-function formatRecordedSplits(
-  splits: { controlCode: string; controlName: string; time: string; place?: string }[],
-): string {
-  return splits
-    .map((split) =>
-      split.place
-        ? `${split.controlName}: ${split.time} (Pos ${split.place})`
-        : `${split.controlName}: ${split.time}`,
-    )
-    .join(' \u00b7 ')
+function SplitsTable({
+  splits,
+}: {
+  splits: { controlCode: string; controlName: string; time: string; place?: string }[]
+}) {
+  return (
+    <table class="mt-1 w-full text-[11px]">
+      <thead>
+        <tr class="text-left text-slate-400">
+          <th class="font-medium pr-2">Control</th>
+          <th class="font-medium pr-2">Time</th>
+          <th class="font-medium text-right">Pos</th>
+        </tr>
+      </thead>
+      <tbody>
+        {splits.map((split) => (
+          <tr key={split.controlCode}>
+            <td class="pr-2">{split.controlName}</td>
+            <td class="pr-2 tabular-nums">{split.time}</td>
+            <td class="text-right tabular-nums">{split.place ?? '—'}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
 }
 
 export function LiveResultsDisplay({
@@ -221,9 +252,9 @@ export function LiveResultsDisplay({
                 )}
               </p>
               {recordedSplits.length > 0 && (
-                <p class="mt-1 text-[11px] text-emerald-700">
-                  Splits: {formatRecordedSplits(recordedSplits)}
-                </p>
+                <div class="text-emerald-700">
+                  <SplitsTable splits={recordedSplits} />
+                </div>
               )}
             </article>
           )
@@ -311,9 +342,9 @@ export function LiveResultsDisplay({
                     </p>
                   )}
                   {recordedSplits.length > 0 && (
-                    <p class="mt-1 text-[11px] text-slate-500">
-                      Splits: {formatRecordedSplits(recordedSplits)}
-                    </p>
+                    <div class="mt-1 text-slate-500">
+                      <SplitsTable splits={recordedSplits} />
+                    </div>
                   )}
                 </>
               )}
