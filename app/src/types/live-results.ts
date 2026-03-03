@@ -16,9 +16,9 @@ export type Runner = {
   place: string
   name: string
   club: string
-  result: string | number
+  result: string
   status: number
-  timeplus: string | number
+  timeplus: string
   progress: number
   start: number
   className?: string
@@ -28,9 +28,9 @@ export type ResultEntry = {
   place: string
   name: string
   club: string
-  result: string | number
+  result: string
   status: number
-  timeplus: string | number
+  timeplus: string
   progress: number
   start: number
   className?: string

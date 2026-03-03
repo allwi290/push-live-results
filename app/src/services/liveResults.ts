@@ -6,6 +6,7 @@ import type {
   ResultEntry,
   Club,
 } from '../types/live-results'
+import { formatCentiseconds, formatTimeplus, formatSplitTimes } from '../utils/timeFormat'
 
 // Backend API for endpoints that need server-side logic (caching, notifications)
 const API_BASE = import.meta.env.VITE_BACKEND_API_URL || '/api'
@@ -310,7 +311,9 @@ export async function fetchClassResults(
 
       return {
         ...r,
-        splits,
+        result: formatCentiseconds(r.result),
+        timeplus: formatTimeplus(r.timeplus),
+        splits: formatSplitTimes(splits as Record<string, string | number>),
         splitControlNames,
         totalControls,
         passedControls,
@@ -439,9 +442,9 @@ export async function fetchRunnersForClub(
       name: r.name,
       club: r.club,
       className: r.class,
-      result: r.result,
+      result: formatCentiseconds(r.result),
       status: r.status,
-      timeplus: r.timeplus,
+      timeplus: formatTimeplus(r.timeplus),
       progress: r.progress ?? (r.status === 0 ? 100 : 0),
       start: r.start,
     }))
