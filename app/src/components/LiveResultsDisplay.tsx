@@ -192,10 +192,10 @@ export function LiveResultsDisplay({
     )
     .sort((a, b) => a.start - b.start)
 
-  // Finished / error statuses (everything except 9/10), see Runner Status, sorted descending
+  // Finished / error statuses (everything except 9/10), see Runner Status, sorted ascending
   const finished = results
     .filter((r) => r.status !== 9 && r.status !== 10)
-    .sort((a, b) => b.status - a.status)
+    .sort((a, b) => a.status - b.status)
 
   return (
     <section id="live-results-section" class="rounded-2xl bg-white p-4 shadow-sm">
