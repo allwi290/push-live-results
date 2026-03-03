@@ -89,7 +89,7 @@ function cacheCleanup(): void {
   const keysToRemove: string[] = []
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i)
-    if (!key || !key.startsWith(CACHE_PREFIX)) continue
+    if (!key?.startsWith(CACHE_PREFIX)) continue
     try {
       const raw = localStorage.getItem(key)
       if (!raw) continue
@@ -98,7 +98,7 @@ function cacheCleanup(): void {
         keysToRemove.push(key)
       }
     } catch {
-      keysToRemove.push(key!) // corrupt entry, remove it
+      keysToRemove.push(key) // corrupt entry, remove it
     }
   }
   keysToRemove.forEach((k) => localStorage.removeItem(k))
@@ -134,7 +134,7 @@ async function fetchLiveResultsApi<T>(params: URLSearchParams): Promise<T> {
   const uint8Array = new Uint8Array(arrayBuffer)
   sanitizeControlCharacters(uint8Array)
   const text = new TextDecoder('utf-8', { fatal: false }).decode(uint8Array)
-  return JSON5.parse(text) as T
+  return JSON5.parse(text)
 }
 
 /** Fetch from our backend API (used for endpoints needing server-side logic) */
@@ -234,7 +234,7 @@ export async function fetchCompetitionInfo(
 
 export async function fetchClasses(
   compId: number,
-  _lastHash?: string,
+  lastHash?: string,
 ): Promise<RaceClass[]> {
   // Try local cache first
   const cacheKey = `classes_${compId}`
@@ -246,6 +246,9 @@ export async function fetchClasses(
       method: 'getclasses',
       comp: compId.toString(),
     })
+    if (lastHash) {
+      params.append('last_hash', lastHash)
+    }
     const data = await fetchLiveResultsApi<{ classes: RaceClass[] }>(params)
     const classes = data.classes || []
     cacheSet(cacheKey, classes)
@@ -268,7 +271,7 @@ export async function fetchClassResults(
       method: 'getclassresults',
       comp: compId.toString(),
       class: className,
-      unformattedTimes: 'false',
+      unformattedTimes: 'true',
     })
     if (cached?.hash) {
       params.append('last_hash', cached.hash)
@@ -276,8 +279,8 @@ export async function fetchClassResults(
 
     const data = await fetchLiveResultsApi<{
       status?: string
-      results?: Array<ResultEntry & { splits?: Record<string, unknown> }>
-      splitcontrols?: Array<{ code: number; name: string }>
+      results?: (ResultEntry & { splits?: Record<string, unknown> })[]
+      splitcontrols?: { code: number; name: string }[]
       hash?: string
     }>(params)
 
@@ -362,7 +365,7 @@ export async function fetchClubs(compId: number): Promise<Club[]> {
             comp: compId.toString(),
             class: raceClass.className,
           })
-          const data = await fetchLiveResultsApi<{ results?: Array<{ club?: string }> }>(params)
+          const data = await fetchLiveResultsApi<{ results?: { club?: string }[] }>(params)
           return data.results || []
         } catch {
           return []
@@ -402,7 +405,7 @@ export async function fetchRunnersForClub(
       method: 'getclubresults',
       comp: compId.toString(),
       club: clubName,
-      unformattedTimes: 'false',
+      unformattedTimes: 'true',
     })
     if (cached?.hash) {
       params.append('last_hash', cached.hash)
@@ -410,17 +413,17 @@ export async function fetchRunnersForClub(
 
     const data = await fetchLiveResultsApi<{
       status?: string
-      results?: Array<{
+      results?: {
         place: string
         name: string
         club: string
         class: string
-        result: string
+        result: string | number
         status: number
-        timeplus: string
+        timeplus: string | number
         progress?: number
         start: number
-      }>
+      }[]
       hash?: string
     }>(params)
 

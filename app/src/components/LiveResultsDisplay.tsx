@@ -76,14 +76,29 @@ function getProgressMessage(
  * Format centiseconds (hundredths of a second) into mm:ss or h:mm:ss.
  * E.g. 85900 → "14:19", 360000 → "1:00:00".
  */
-function formatCentiseconds(cs: number): string {
-  const totalSeconds = Math.floor(cs / 100)
+/**
+ * Format centiseconds (hundredths of a second) into mm:ss or h:mm:ss.
+ * E.g. 85900 → "14:19", 360000 → "1:00:00".
+ * If the value is already a string it is returned as-is.
+ */
+function formatCentiseconds(value: string | number): string {
+  if (typeof value === 'string') return value
+  const totalSeconds = Math.floor(Math.abs(value) / 100)
   const hours = Math.floor(totalSeconds / 3600)
   const minutes = Math.floor((totalSeconds % 3600) / 60)
   const seconds = totalSeconds % 60
   const mm = String(minutes).padStart(2, '0')
   const ss = String(seconds).padStart(2, '0')
   return hours > 0 ? `${hours}:${mm}:${ss}` : `${minutes}:${ss}`
+}
+
+/**
+ * Format a timeplus value (time behind leader) with a "+" prefix.
+ * E.g. 8100 → "+1:21", 0 → "+0:00", "+01:21" → "+01:21".
+ */
+function formatTimeplus(value: string | number): string {
+  if (typeof value === 'string') return value
+  return `+${formatCentiseconds(value)}`
 }
 
 function getRecordedSplits(
@@ -118,9 +133,9 @@ function getRecordedSplits(
       return {
         controlCode: key,
         controlName: nameMap?.[key] || key,
-        time: typeof splitMap[key] === 'number'
-          ? formatCentiseconds(splitMap[key])
-          : String(splitMap[key]),
+        time: formatCentiseconds(
+          typeof splitMap[key] === 'number' ? splitMap[key] : String(splitMap[key]),
+        ),
         place: placeText && placeText !== '-' ? placeText : undefined,
       }
     })
@@ -333,8 +348,8 @@ export function LiveResultsDisplay({
               {isOK && (
                 <>
                   <div class="mt-2 grid grid-cols-2 text-xs text-slate-600">
-                    <span>Result: {result.result}</span>
-                    <span class="text-right">{result.timeplus}</span>
+                    <span>Result: {formatCentiseconds(result.result)}</span>
+                    <span class="text-right">{formatTimeplus(result.timeplus)}</span>
                   </div>
                   {inProgress && (
                     <p class="mt-1 text-[11px] text-slate-400">
