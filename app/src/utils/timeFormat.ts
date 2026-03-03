@@ -27,7 +27,6 @@ export function formatCentiseconds(value: string | number): string {
  * Returns the value as-is if it is already a string (e.g. "+").
  */
 export function formatTimeplus(value: string | number): string {
-  if (typeof value === 'string') return value
   return `+${formatCentiseconds(value)}`
 }
 

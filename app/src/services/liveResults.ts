@@ -280,7 +280,7 @@ export async function fetchClassResults(
 
     const data = await fetchLiveResultsApi<{
       status?: string
-      results?: Array<{
+      results?: {
         place: string
         name: string
         club: string
@@ -291,7 +291,7 @@ export async function fetchClassResults(
         start: number
         className?: string
         splits?: Record<string, unknown>
-      }>
+      }[]
       splitcontrols?: { code: number; name: string }[]
       hash?: string
     }>(params)
