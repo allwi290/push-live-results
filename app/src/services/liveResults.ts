@@ -280,7 +280,18 @@ export async function fetchClassResults(
 
     const data = await fetchLiveResultsApi<{
       status?: string
-      results?: (ResultEntry & { splits?: Record<string, unknown> })[]
+      results?: Array<{
+        place: string
+        name: string
+        club: string
+        result: string | number
+        status: number
+        timeplus: string | number
+        progress: number
+        start: number
+        className?: string
+        splits?: Record<string, unknown>
+      }>
       splitcontrols?: { code: number; name: string }[]
       hash?: string
     }>(params)
