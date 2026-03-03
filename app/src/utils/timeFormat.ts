@@ -28,7 +28,7 @@ export function formatCentiseconds(value: string | number): string {
  */
 export function formatTimeplus(value: string | number): string {
   if (typeof value === 'string') {
-    if (value.includes(':')) {
+    if (value.includes('+')) {
       return value
     }
   }
