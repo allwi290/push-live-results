@@ -72,7 +72,7 @@ Example response
 
 ### getclassresults
 
-Example response:
+Example response for a runner in the forrest:
 
 ``` json
 {
@@ -140,8 +140,8 @@ This is how getclassresults changes for a runner during a competition
 | **status** | `10` | → `9` | | | | | | | | | → `0` | |
 | **progress** | `0` | | | → `20` | | → `40` | | → `60` | | → `80` | → `100` | |
 | **place** | `""` | | | | | | | | | | → `"1"` | |
-| **result** | `""` | | | | | | | | | | → `"43:18"` | |
-| **timeplus** | `"+"` | | | | | | | | | | → `"+00:00"` | |
+| **result** | `""` | | | | | | | | | | → `"258018"` | |
+| **timeplus** | `"+"` | | | | | | | | | | → `"0"` | |
 | **DT_RowClass** | — | + `new_result` | removed | + `new_result` | removed | + `new_result` | removed | + `new_result` | removed | + `new_result` | `new_result` | removed |
 | **1065** (split) | `""` | | | → `26900` | | | | | | | | |
 | **1065_status** | `1` | | | → `0` | | | | | | | | |

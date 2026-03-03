@@ -4,7 +4,14 @@
  * Returns the value as-is if it is already a string.
  */
 export function formatCentiseconds(value: string | number): string {
-  if (typeof value === 'string') return value
+  // If the string is already formatted (contains ":"), return as-is.
+  // If it's a numeric string (e.g. "24018"), parse it as a number first.
+  if (typeof value === 'string') {
+    if (value.includes(':')) {
+      return value
+    }
+    return formatCentiseconds(parseInt(value, 10))
+  }
   const totalSeconds = Math.floor(Math.abs(value) / 100)
   const hours = Math.floor(totalSeconds / 3600)
   const minutes = Math.floor((totalSeconds % 3600) / 60)
